@@ -1,76 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maayping - Capybara Typing Adventure</title>
-    <link rel="stylesheet" href="./css/styles.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maayping - Beaver Typing Adventure</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
     <!-- Language Selection Screen -->
     <div id="menu-screen" class="screen">
-        <div class="menu-content">
-            <div class="title-section">
-                <span class="title-emoji">🦫</span>
-                <h1>Maayping</h1>
-                <p class="subtitle">A Capybara Typing Adventure</p>
-            </div>
-
-            <div class="language-selection">
-                <h2>Choose Your Language</h2>
-                <div class="lang-buttons">
-                    <button class="lang-btn" data-lang="en">
-                        <span class="flag">🇬🇧</span>
-                        <span class="lang-name">English</span>
-                    </button>
-                    <button class="lang-btn" data-lang="bg">
-                        <span class="flag">🇧🇬</span>
-                        <span class="lang-name">Bulgarian</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="instructions">
-                <h3>How to Play</h3>
-                <p>Type the words on the trees before they reach the capybara!</p>
-                <p>Complete 200 words to win. Good luck!</p>
-            </div>
+      <div class="menu-content">
+        <div class="title-section">
+          <span class="title-emoji">🦫</span>
+          <h1>Maayping</h1>
+          <p class="subtitle">A Beaver Typing Adventure</p>
         </div>
+
+        <div class="language-selection">
+          <h2>Choose Your Language</h2>
+          <div class="lang-buttons">
+            <button class="lang-btn" data-lang="en">
+              <span class="flag">🇬🇧</span>
+              <span class="lang-name">English</span>
+            </button>
+            <button class="lang-btn" data-lang="bg">
+              <span class="flag">🇧🇬</span>
+              <span class="lang-name">Bulgarian</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <h3>How to Play</h3>
+          <p>Type the words on the trees before they reach the beaver!</p>
+          <p>Complete 200 words to win. Good luck!</p>
+        </div>
+      </div>
     </div>
 
     <!-- Game Screen -->
     <div id="game-screen" class="screen hidden">
-        <canvas id="game-canvas" width="800" height="600"></canvas>
-        <button id="pause-btn" title="Pause">⏸️</button>
+      <canvas id="game-canvas" width="800" height="600"></canvas>
+      <button id="pause-btn" title="Pause">⏸️</button>
     </div>
 
     <!-- Pause Modal -->
     <div id="pause-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Game Paused</h2>
-            <div class="modal-buttons">
-                <button id="resume-btn" class="primary-btn">Resume</button>
-                <button id="quit-btn" class="secondary-btn">Quit to Menu</button>
-            </div>
+      <div class="modal-content">
+        <h2>Game Paused</h2>
+        <div class="modal-buttons">
+          <button id="resume-btn" class="primary-btn">Resume</button>
+          <button id="quit-btn" class="secondary-btn">Quit to Menu</button>
         </div>
+      </div>
     </div>
 
     <!-- Game Over Modal -->
     <div id="game-over-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2 id="result-title">Game Over!</h2>
-            <p id="result-message"></p>
-            <div class="stats">
-                <p>Words typed: <span id="words-typed">0</span></p>
-                <p>Accuracy: <span id="accuracy">0</span>%</p>
-            </div>
-            <div class="modal-buttons">
-                <button id="play-again-btn" class="primary-btn">Play Again</button>
-                <button id="menu-btn" class="secondary-btn">Main Menu</button>
-            </div>
+      <div class="modal-content">
+        <h2 id="result-title">Game Over!</h2>
+        <p id="result-message"></p>
+        <div class="stats">
+          <p>Words typed: <span id="words-typed">0</span></p>
+          <p>Accuracy: <span id="accuracy">0</span>%</p>
         </div>
+        <div class="modal-buttons">
+          <button id="play-again-btn" class="primary-btn">Play Again</button>
+          <button id="menu-btn" class="secondary-btn">Main Menu</button>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="./js/main.js"></script>
-</body>
+  </body>
 </html>
