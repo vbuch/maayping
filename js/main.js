@@ -76,6 +76,9 @@ class App {
     this.authAvatarImg = document.getElementById("auth-avatar-img");
     this.authAvatarFallback = document.getElementById("auth-avatar-fallback");
     this.titleEmoji = document.getElementById("title-emoji");
+    this.accountFooter = document.getElementById("account-footer");
+    this.footerProfileBtn = document.getElementById("footer-profile-btn");
+    this.footerLoginBtn = document.getElementById("footer-login-btn");
     this.footerStatsBtn = document.getElementById("footer-stats-btn");
     this.footerEditBtn = document.getElementById("footer-edit-btn");
     this.footerLogoutBtn = document.getElementById("footer-logout-btn");
@@ -99,6 +102,9 @@ class App {
     this.renderEmojiGrid();
     this.applyProfileDifficulty();
     this.updateTitleEmoji();
+
+    this.ensureFooterLoginButton();
+    this.footerLoginBtn = document.getElementById("footer-login-btn");
 
     if (this.allowAnonymous) {
       this.ensureLocalProfile();
@@ -206,14 +212,22 @@ class App {
       this.authAvatarBtn.addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!this.authUser) {
-          if (this.allowAnonymous) {
-            await this.openProfileModal("edit");
-            return;
-          }
           await this.handleLogin();
           return;
         }
         await this.openProfileModal("edit");
+      });
+    }
+
+    if (this.footerProfileBtn) {
+      this.footerProfileBtn.addEventListener("click", async () => {
+        await this.openProfileModal("edit");
+      });
+    }
+
+    if (this.footerLoginBtn) {
+      this.footerLoginBtn.addEventListener("click", async () => {
+        await this.handleLogin();
       });
     }
 
@@ -248,7 +262,6 @@ class App {
         }
       });
     }
-
   }
 
   // Start a new game with selected language
@@ -814,7 +827,28 @@ class App {
     });
     if (this.footerLogoutBtn) {
       this.footerLogoutBtn.disabled = !logoutEnabled;
-      this.footerLogoutBtn.setAttribute("aria-disabled", String(!logoutEnabled));
+      this.footerLogoutBtn.setAttribute(
+        "aria-disabled",
+        String(!logoutEnabled),
+      );
+    }
+    if (this.footerLoginBtn) {
+      this.footerLoginBtn.disabled = Boolean(this.authUser);
+      this.footerLoginBtn.setAttribute(
+        "aria-disabled",
+        String(Boolean(this.authUser)),
+      );
+      this.footerLoginBtn.title = this.authUser ? "You're logged in" : "Log in";
+    }
+    if (this.footerProfileBtn) {
+      this.footerProfileBtn.disabled = !statsEnabled;
+      this.footerProfileBtn.setAttribute(
+        "aria-disabled",
+        String(!statsEnabled),
+      );
+      this.footerProfileBtn.title = statsEnabled
+        ? "Edit profile"
+        : "Log in to edit profile";
     }
     if (this.footerStatsBtn) {
       this.footerStatsBtn.title = statsEnabled
@@ -828,6 +862,19 @@ class App {
     }
     if (this.footerLogoutBtn) {
       this.footerLogoutBtn.title = logoutEnabled ? "Log out" : "Log in first";
+    }
+  }
+
+  ensureFooterLoginButton() {
+    if (this.footerLoginBtn || !this.accountFooter) return;
+    const button = document.createElement("button");
+    button.id = "footer-login-btn";
+    button.type = "button";
+    button.textContent = "Log in";
+    if (this.footerProfileBtn && this.footerProfileBtn.parentNode) {
+      this.footerProfileBtn.insertAdjacentElement("afterend", button);
+    } else {
+      this.accountFooter.appendChild(button);
     }
   }
 
@@ -860,10 +907,7 @@ class App {
     const summaryEntries = this.flattenMaxSummary(
       this.profile?.maxSummary ?? {},
     );
-    const recentEntries = this.getRecentStats(
-      this.profile?.stats ?? [],
-      6,
-    );
+    const recentEntries = this.getRecentStats(this.profile?.stats ?? [], 6);
 
     this.statsSummaryList.innerHTML = "";
     this.statsRecentList.innerHTML = "";
@@ -911,7 +955,8 @@ class App {
   getStatTimeLabel(entry) {
     if (entry.time) return entry.time;
     if (entry.createdAt) return this.formatTimestamp(new Date(entry.createdAt));
-    if (entry.localOrder) return this.formatTimestamp(new Date(entry.localOrder));
+    if (entry.localOrder)
+      return this.formatTimestamp(new Date(entry.localOrder));
     return "—";
   }
 

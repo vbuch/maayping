@@ -36,24 +36,9 @@ body {
   align-items: center;
 }
 
-.auth-avatar {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4;
-}
-
-.auth-avatar button {
-  border: none;
-  background: rgba(0, 0, 0, 0.45);
-  color: white;
-  cursor: pointer;
-}
-
-#auth-avatar-btn {
-  width: 44px;
-  height: 44px;
+.footer-avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   padding: 0;
   display: grid;
@@ -61,29 +46,29 @@ body {
   overflow: hidden;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.45);
 }
 
-#auth-avatar-btn img {
+.footer-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-#auth-avatar-btn img.hidden {
+.footer-avatar img.hidden {
   display: none;
 }
 
-#auth-avatar-btn img:not([src]),
-#auth-avatar-btn img[src=""] {
+.footer-avatar img:not([src]),
+.footer-avatar img[src=""] {
   display: none;
 }
 
 #auth-avatar-fallback {
-  font-size: 22px;
+  font-size: 16px;
   line-height: 1;
 }
-
 
 /* Account footer */
 .account-footer {
@@ -95,22 +80,13 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 16px;
   background: rgba(0, 0, 0, 0.55);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(6px);
   z-index: 120;
   align-items: center;
-}
-
-.account-footer .auth-avatar {
-  flex: 0 0 auto;
-}
-
-.account-footer .auth-avatar button {
-  width: 42px;
-  height: 42px;
 }
 
 .account-footer button {
@@ -121,12 +97,27 @@ body {
   color: white;
   font-weight: 600;
   font-size: 14px;
-  padding: 10px 12px;
+  height: 40px;
+  padding: 0 12px;
+  line-height: 1;
   cursor: pointer;
   transition:
     transform 0.2s ease,
     background 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+.account-footer .footer-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+}
+
+.footer-profile-text {
+  display: inline-block;
 }
 
 .account-footer button:hover {
@@ -705,6 +696,7 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 3;
 }
 
 #pause-btn:hover {

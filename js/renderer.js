@@ -584,7 +584,8 @@ export class Renderer {
 
   // Draw lives indicator with leaf icons
   drawLivesIndicator(livesRemaining, maxLives) {
-    const startX = this.width - 30;
+    const pauseButtonOffset = 45;
+    const startX = this.width - 30 - pauseButtonOffset;
     const y = 30;
     const spacing = 25;
 
