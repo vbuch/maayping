@@ -403,6 +403,88 @@ h1 {
   display: block;
 }
 
+/* Responsive layout for mobile and small screens */
+@media (max-width: 900px), (max-height: 700px) {
+  body {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .screen {
+    width: min(100vw, 800px);
+    height: min(100svh, 600px);
+  }
+
+  #game-screen,
+  #menu-screen {
+    width: 100%;
+    height: 100%;
+  }
+
+  #game-canvas {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+  }
+
+  .menu-content {
+    padding: 20px 18px;
+  }
+
+  .title-emoji {
+    font-size: 52px;
+  }
+
+  h1 {
+    font-size: 38px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .lang-btn {
+    padding: 12px 22px;
+  }
+
+  .lang-btn .flag {
+    font-size: 34px;
+  }
+
+  .difficulty-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .profile-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+
+  .profile-stats {
+    max-width: 320px;
+  }
+}
+
+@media (max-height: 500px) {
+  .screen {
+    height: min(100svh, 520px);
+  }
+
+  .title-emoji {
+    font-size: 46px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .instructions {
+    padding: 10px;
+  }
+}
+
 #pause-btn {
   position: absolute;
   top: 15px;

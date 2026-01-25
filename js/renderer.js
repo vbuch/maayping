@@ -307,7 +307,7 @@ export class Renderer {
   // Draw word text with letter coloring
   drawWordText(word) {
     const text = word.text;
-    const fontSize = CONFIG.words.fontSize;
+    const fontSize = this.getWordFontSize();
 
     this.ctx.font = `bold ${fontSize}px Arial`;
     this.ctx.textAlign = "left";
@@ -347,6 +347,18 @@ export class Renderer {
 
       currentX += this.ctx.measureText(char).width;
     }
+  }
+
+  // Increase word font size on small screens (mobile)
+  getWordFontSize() {
+    if (typeof window === "undefined") {
+      return CONFIG.words.fontSize;
+    }
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const isSmall = width <= 600 || height <= 600;
+    const scale = isSmall ? 1.25 : 1;
+    return Math.round(CONFIG.words.fontSize * scale);
   }
 
   // Draw semi-transparent background behind word for readability
