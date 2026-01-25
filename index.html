@@ -11,7 +11,7 @@
     <div id="menu-screen" class="screen">
       <div class="menu-content">
         <div class="title-section">
-          <span class="title-emoji">🦫</span>
+          <span class="title-emoji" id="title-emoji">🦫</span>
           <h1>Maayping</h1>
           <p class="subtitle">A Typing Adventure</p>
         </div>
@@ -40,19 +40,6 @@
               Gentle (Half Speed)
             </button>
           </div>
-        </div>
-      </div>
-      <div id="auth-avatar" class="auth-avatar">
-        <button id="auth-avatar-btn" type="button" aria-label="Account">
-          <img id="auth-avatar-img" alt="Avatar" />
-          <span id="auth-avatar-fallback" aria-hidden="true">👤</span>
-        </button>
-        <div id="auth-avatar-menu" class="auth-avatar-menu hidden">
-          <div class="auth-user-info">
-            <span id="auth-user-name"></span>
-          </div>
-          <button id="auth-edit-btn" type="button">Edit profile</button>
-          <button id="auth-logout-btn" type="button">Log out</button>
         </div>
       </div>
     </div>
@@ -123,6 +110,42 @@
           <button id="cancel-profile-btn" class="secondary-btn">Cancel</button>
         </div>
       </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal hidden">
+      <div class="modal-content stats-modal">
+        <h2>Your Stats</h2>
+        <p id="stats-empty" class="stats-empty hidden">
+          Play a round to generate your first stats.
+        </p>
+        <div class="stats-grid" id="stats-grid">
+          <div class="stats-section">
+            <h3>Best by mode</h3>
+            <ul id="stats-summary-list" class="stats-list"></ul>
+          </div>
+          <div class="stats-section">
+            <h3>Recent runs</h3>
+            <ul id="stats-recent-list" class="stats-list"></ul>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button id="stats-close-btn" class="primary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Footer -->
+    <div id="account-footer" class="account-footer">
+      <div id="auth-avatar" class="auth-avatar">
+        <button id="auth-avatar-btn" type="button" aria-label="Account">
+          <img id="auth-avatar-img" alt="Avatar" />
+          <span id="auth-avatar-fallback" aria-hidden="true">👤</span>
+        </button>
+      </div>
+      <button id="footer-stats-btn" type="button">Stats</button>
+      <button id="footer-edit-btn" type="button">Edit profile</button>
+      <button id="footer-logout-btn" type="button">Log out</button>
     </div>
 
     <script type="module" src="./js/main.js"></script>

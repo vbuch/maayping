@@ -75,12 +75,20 @@ class App {
     this.authAvatarBtn = document.getElementById("auth-avatar-btn");
     this.authAvatarImg = document.getElementById("auth-avatar-img");
     this.authAvatarFallback = document.getElementById("auth-avatar-fallback");
-    this.authAvatarMenu = document.getElementById("auth-avatar-menu");
-    this.authUserName = document.getElementById("auth-user-name");
-    this.authEditBtn = document.getElementById("auth-edit-btn");
-    this.authLogoutBtn = document.getElementById("auth-logout-btn");
+    this.titleEmoji = document.getElementById("title-emoji");
+    this.footerStatsBtn = document.getElementById("footer-stats-btn");
+    this.footerEditBtn = document.getElementById("footer-edit-btn");
+    this.footerLogoutBtn = document.getElementById("footer-logout-btn");
+    this.statsModal = document.getElementById("stats-modal");
+    this.statsSummaryList = document.getElementById("stats-summary-list");
+    this.statsRecentList = document.getElementById("stats-recent-list");
+    this.statsEmptyState = document.getElementById("stats-empty");
+    this.statsGrid = document.getElementById("stats-grid");
+    this.statsCloseBtn = document.getElementById("stats-close-btn");
 
     this.authUser = null;
+    this.allowAnonymous = this.isLocalEnvironment();
+    this.localProfileKey = "maayping-local-profile";
     this.syncIndicator = null;
     this.syncIndicatorTimeout = null;
     this.lastSyncAt = 0;
@@ -90,6 +98,11 @@ class App {
 
     this.renderEmojiGrid();
     this.applyProfileDifficulty();
+    this.updateTitleEmoji();
+
+    if (this.allowAnonymous) {
+      this.ensureLocalProfile();
+    }
 
     this.initializeFirebase();
 
@@ -193,42 +206,64 @@ class App {
       this.authAvatarBtn.addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!this.authUser) {
+          if (this.allowAnonymous) {
+            await this.openProfileModal("edit");
+            return;
+          }
           await this.handleLogin();
           return;
         }
-        this.toggleAvatarMenu();
-      });
-    }
-
-    if (this.authEditBtn) {
-      this.authEditBtn.addEventListener("click", async () => {
-        this.closeAvatarMenu();
         await this.openProfileModal("edit");
       });
     }
 
-    if (this.authLogoutBtn) {
-      this.authLogoutBtn.addEventListener("click", () => {
+    if (this.footerStatsBtn) {
+      this.footerStatsBtn.addEventListener("click", async () => {
+        await this.openStatsModal();
+      });
+    }
+
+    if (this.footerEditBtn) {
+      this.footerEditBtn.addEventListener("click", async () => {
+        await this.openProfileModal("edit");
+      });
+    }
+
+    if (this.footerLogoutBtn) {
+      this.footerLogoutBtn.addEventListener("click", () => {
         this.handleLogout();
       });
     }
 
-    document.addEventListener("click", (event) => {
-      if (!this.authAvatar) return;
-      if (this.authAvatar.contains(event.target)) return;
-      this.closeAvatarMenu();
-    });
+    if (this.statsCloseBtn) {
+      this.statsCloseBtn.addEventListener("click", () => {
+        this.closeStatsModal();
+      });
+    }
+
+    if (this.statsModal) {
+      this.statsModal.addEventListener("click", (event) => {
+        if (event.target === this.statsModal) {
+          this.closeStatsModal();
+        }
+      });
+    }
+
   }
 
   // Start a new game with selected language
   async startGame(language) {
-    if (!this.authUser) {
+    if (!this.authUser && !this.allowAnonymous) {
       this.showLoginRequiredMessage();
       return;
     }
 
     if (!this.profileLoaded) {
-      await this.loadUserProfile();
+      if (this.allowAnonymous && !this.authUser) {
+        this.ensureLocalProfile();
+      } else {
+        await this.loadUserProfile();
+      }
       if (!this.profileLoaded) {
         this.showLoginRequiredMessage();
         return;
@@ -317,6 +352,7 @@ class App {
     accuracy.textContent = result.accuracy;
 
     this.saveProfileStats(result);
+    this.renderStatsModal();
 
     // Show modal
     modal.classList.remove("hidden");
@@ -404,12 +440,69 @@ class App {
   createDefaultProfile() {
     return {
       id: this.profileId,
-      name: this.authUser?.displayName || "Player",
+      name: this.authUser?.displayName || this.profile?.name || "Player",
       emoji: "🦫",
       lastDifficulty: 1,
       stats: [],
       maxSummary: {},
     };
+  }
+
+  isLocalEnvironment() {
+    const hostname = window.location.hostname;
+    return (
+      window.location.protocol === "file:" ||
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0"
+    );
+  }
+
+  ensureLocalProfile() {
+    if (this.profileLoaded && this.profile) return;
+    const stored = this.loadLocalProfile();
+    if (stored) {
+      this.profile = stored;
+      this.profileLoaded = true;
+      this.applyProfileDifficulty();
+      return;
+    }
+    const profile = this.normalizeProfile(this.createDefaultProfile());
+    this.profile = profile;
+    this.profileLoaded = true;
+    this.applyProfileDifficulty();
+  }
+
+  loadLocalProfile() {
+    if (!this.allowAnonymous) return null;
+    try {
+      const raw = localStorage.getItem(this.localProfileKey);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return this.normalizeProfile(data ?? {});
+    } catch (error) {
+      console.warn("Failed to load local profile:", error);
+      return null;
+    }
+  }
+
+  saveLocalProfile() {
+    if (!this.allowAnonymous || !this.profile) return;
+    try {
+      localStorage.setItem(
+        this.localProfileKey,
+        JSON.stringify({
+          id: this.profile.id,
+          name: this.profile.name,
+          emoji: this.profile.emoji,
+          lastDifficulty: this.profile.lastDifficulty ?? 1,
+          stats: this.profile.stats ?? [],
+          maxSummary: this.profile.maxSummary ?? {},
+        }),
+      );
+    } catch (error) {
+      console.warn("Failed to save local profile:", error);
+    }
   }
 
   normalizeProfile(profile) {
@@ -460,6 +553,10 @@ class App {
   persistProfileDifficulty() {
     if (!this.profile) return;
     this.profile.lastDifficulty = this.currentSpeedMultiplier;
+    if (this.allowAnonymous && !this.authUser) {
+      this.saveLocalProfile();
+      return;
+    }
     this.queueProfileSync();
   }
 
@@ -519,15 +616,20 @@ class App {
     }
 
     if (mode === "edit") {
-      if (!this.authUser) {
+      if (!this.authUser && !this.allowAnonymous) {
         this.showLoginRequiredMessage();
         return;
       }
       if (!this.profileLoaded) {
-        await this.loadUserProfile();
+        if (this.allowAnonymous && !this.authUser) {
+          this.ensureLocalProfile();
+        } else {
+          await this.loadUserProfile();
+        }
       }
-      const fallbackName = this.authUser.displayName || "";
-      this.profileNameInput.value = this.profile?.name ?? fallbackName;
+      const fallbackName = this.authUser?.displayName || "";
+      this.profileNameInput.value =
+        this.profile?.name ?? fallbackName ?? "Player";
       const emoji = this.profile?.emoji ?? this.selectedEmoji;
       if (emoji) {
         this.selectEmojiByValue(emoji);
@@ -556,6 +658,9 @@ class App {
   async handleProfileModalPrimaryAction() {
     if (this.profileModalMode === "message") {
       this.closeProfileModal();
+      if (this.allowAnonymous) {
+        return;
+      }
       await this.handleLogin();
       return;
     }
@@ -565,7 +670,7 @@ class App {
   async handleSaveProfile() {
     const name = this.profileNameInput.value.trim();
     if (!name || !this.selectedEmoji) return;
-    if (!this.authUser) {
+    if (!this.authUser && !this.allowAnonymous) {
       this.showLoginRequiredMessage();
       return;
     }
@@ -587,6 +692,10 @@ class App {
     this.closeProfileModal();
     this.updateAuthAvatar();
     this.updatePlayAvailability();
+    if (this.allowAnonymous && !this.authUser) {
+      this.saveLocalProfile();
+      return;
+    }
     await this.syncProfileMetadata(profile);
   }
 
@@ -607,8 +716,14 @@ class App {
     profile.maxSummary = profile.maxSummary ?? {};
     this.updateMaxSummary(profile, entry);
     this.profile = profile;
+    if (this.allowAnonymous && !this.authUser) {
+      this.saveLocalProfile();
+      this.renderStatsModal();
+      return;
+    }
     this.syncStatEntry(profile, entry);
     this.syncMaxSummary(profile);
+    this.renderStatsModal();
   }
 
   getProfileEmoji() {
@@ -630,10 +745,13 @@ class App {
       this.authUser = user;
       this.profileLoaded = false;
       if (!user) {
-        this.profile = null;
+        if (this.allowAnonymous) {
+          this.ensureLocalProfile();
+        } else {
+          this.profile = null;
+        }
         this.updateAuthAvatar();
         this.updatePlayAvailability();
-        this.closeAvatarMenu();
         return;
       }
       this.isManualSignOut = false;
@@ -660,6 +778,7 @@ class App {
       this.profile = profile;
       this.profileLoaded = true;
       this.applyProfileDifficulty();
+      this.renderStatsModal();
     } catch (error) {
       console.warn("Failed to load remote profile:", error);
       this.profileLoaded = false;
@@ -667,6 +786,7 @@ class App {
   }
 
   showLoginRequiredMessage() {
+    if (this.allowAnonymous) return;
     this.openProfileModal(
       "message",
       "Please log in using the avatar button to start playing.",
@@ -674,18 +794,149 @@ class App {
   }
 
   updatePlayAvailability() {
-    const enabled = Boolean(this.authUser);
+    const enabled = Boolean(this.authUser) || this.allowAnonymous;
     const langButtons = document.querySelectorAll(".lang-btn");
     langButtons.forEach((btn) => {
       btn.classList.toggle("is-disabled", !enabled);
       btn.setAttribute("aria-disabled", String(!enabled));
     });
+    this.updateFooterAvailability();
+  }
+
+  updateFooterAvailability() {
+    const statsEnabled = Boolean(this.authUser) || this.allowAnonymous;
+    const logoutEnabled = Boolean(this.authUser);
+    const buttons = [this.footerStatsBtn, this.footerEditBtn];
+    buttons.forEach((btn) => {
+      if (!btn) return;
+      btn.disabled = !statsEnabled;
+      btn.setAttribute("aria-disabled", String(!statsEnabled));
+    });
+    if (this.footerLogoutBtn) {
+      this.footerLogoutBtn.disabled = !logoutEnabled;
+      this.footerLogoutBtn.setAttribute("aria-disabled", String(!logoutEnabled));
+    }
+    if (this.footerStatsBtn) {
+      this.footerStatsBtn.title = statsEnabled
+        ? "View stats"
+        : "Log in to view stats";
+    }
+    if (this.footerEditBtn) {
+      this.footerEditBtn.title = statsEnabled
+        ? "Edit profile"
+        : "Log in to edit profile";
+    }
+    if (this.footerLogoutBtn) {
+      this.footerLogoutBtn.title = logoutEnabled ? "Log out" : "Log in first";
+    }
+  }
+
+  async openStatsModal() {
+    if (!this.statsModal) return;
+    if (!this.authUser && !this.allowAnonymous) {
+      this.showLoginRequiredMessage();
+      return;
+    }
+    if (!this.profileLoaded) {
+      if (this.allowAnonymous && !this.authUser) {
+        this.ensureLocalProfile();
+      } else {
+        await this.loadUserProfile();
+      }
+    }
+    this.renderStatsModal();
+    this.statsModal.classList.remove("hidden");
+  }
+
+  closeStatsModal() {
+    if (!this.statsModal) return;
+    this.statsModal.classList.add("hidden");
+  }
+
+  renderStatsModal() {
+    if (!this.statsModal || !this.statsSummaryList || !this.statsRecentList) {
+      return;
+    }
+    const summaryEntries = this.flattenMaxSummary(
+      this.profile?.maxSummary ?? {},
+    );
+    const recentEntries = this.getRecentStats(
+      this.profile?.stats ?? [],
+      6,
+    );
+
+    this.statsSummaryList.innerHTML = "";
+    this.statsRecentList.innerHTML = "";
+
+    summaryEntries.forEach((entry) => {
+      const li = document.createElement("li");
+      const meta = document.createElement("div");
+      meta.className = "stats-meta";
+      meta.innerHTML = `<span>${this.formatLanguageLabel(
+        entry.language,
+      )} · ${this.formatDifficultyLabel(entry.difficulty)}</span>`;
+      const value = document.createElement("div");
+      value.className = "stats-value";
+      value.textContent = `${entry.wordsTyped} words · ${entry.accuracy}%`;
+      li.appendChild(meta);
+      li.appendChild(value);
+      this.statsSummaryList.appendChild(li);
+    });
+
+    recentEntries.forEach((entry) => {
+      const li = document.createElement("li");
+      const meta = document.createElement("div");
+      meta.className = "stats-meta";
+      const timeLabel = this.getStatTimeLabel(entry);
+      meta.innerHTML = `<span>${this.formatLanguageLabel(
+        entry.language,
+      )} · ${this.formatDifficultyLabel(entry.difficulty)}</span><span>${timeLabel}</span>`;
+      const value = document.createElement("div");
+      value.className = "stats-value";
+      value.textContent = `${entry.wordsTyped} words · ${entry.accuracy}%`;
+      li.appendChild(meta);
+      li.appendChild(value);
+      this.statsRecentList.appendChild(li);
+    });
+
+    const hasStats = summaryEntries.length > 0 || recentEntries.length > 0;
+    if (this.statsEmptyState) {
+      this.statsEmptyState.classList.toggle("hidden", hasStats);
+    }
+    if (this.statsGrid) {
+      this.statsGrid.classList.toggle("hidden", !hasStats);
+    }
+  }
+
+  getStatTimeLabel(entry) {
+    if (entry.time) return entry.time;
+    if (entry.createdAt) return this.formatTimestamp(new Date(entry.createdAt));
+    if (entry.localOrder) return this.formatTimestamp(new Date(entry.localOrder));
+    return "—";
   }
 
   updateAuthAvatar() {
     if (!this.authAvatar) return;
 
     if (!this.authUser) {
+      if (this.allowAnonymous) {
+        const displayName = this.profile?.name || "Guest";
+        if (this.authAvatarBtn) {
+          this.authAvatarBtn.title = displayName;
+        }
+        if (this.authAvatarImg) {
+          this.authAvatarImg.removeAttribute("src");
+          this.authAvatarImg.classList.add("hidden");
+        }
+        if (this.authAvatarFallback) {
+          this.authAvatarFallback.textContent = this.getProfileEmoji();
+          this.authAvatarFallback.classList.remove("hidden");
+        }
+        if (this.authUserName) {
+          this.authUserName.textContent = displayName;
+        }
+        return;
+      }
       if (this.authAvatarBtn) {
         this.authAvatarBtn.title = "Log in";
       }
@@ -728,6 +979,13 @@ class App {
     if (this.authUserName) {
       this.authUserName.textContent = displayName;
     }
+    this.updateTitleEmoji();
+  }
+
+  updateTitleEmoji() {
+    if (!this.titleEmoji) return;
+    const emoji = this.getProfileEmoji();
+    this.titleEmoji.textContent = emoji || "🦫";
   }
 
   toggleAvatarMenu() {
