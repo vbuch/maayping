@@ -59,8 +59,8 @@ export class Renderer {
       const depth = this.seededRange(seed + 3, 0.15, 1);
       const x = this.seededRange(seed, 40, this.width - 40);
       const baseY = this.seededRange(seed + 5, -40, this.height - 120);
-      const size = 34 + depth * 62;
-      const alpha = 0.15 + depth * 0.55;
+      const size = 40 + depth * 70;
+      const alpha = 0.25 + depth * 0.6;
       const parallax = 0.35 + depth * 0.95;
       backgroundTrees.push({
         x,
@@ -78,7 +78,7 @@ export class Renderer {
       const seed = i * 57 + 31;
       const x = this.seededRange(seed, 20, this.width - 20);
       const y = this.seededRange(seed + 7, this.height - 90, this.height - 15);
-      const size = this.seededRange(seed + 13, 14, 22);
+      const size = this.seededRange(seed + 13, 18, 28);
       groundFlowers.push({
         x,
         y,
@@ -219,7 +219,7 @@ export class Renderer {
       this.ctx.font = `${flower.size}px Arial`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
-      this.ctx.globalAlpha = 0.85;
+      this.ctx.globalAlpha = 0.92;
       this.ctx.fillText(flower.emoji, flower.x + sway, flower.y + bob);
     });
     this.ctx.globalAlpha = 1;
@@ -235,7 +235,7 @@ export class Renderer {
       this.ctx.font = `${animal.size}px Arial`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
-      this.ctx.globalAlpha = 0.75;
+      this.ctx.globalAlpha = 0.85;
       this.ctx.fillText(animal.emoji, x + offset, animal.y + bob);
     });
     this.ctx.globalAlpha = 1;
@@ -253,7 +253,7 @@ export class Renderer {
       this.ctx.font = `${animal.size}px Arial`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
-      this.ctx.globalAlpha = 0.7;
+      this.ctx.globalAlpha = 0.8;
       this.ctx.fillText(animal.emoji, x, animal.y + bob);
     });
     this.ctx.globalAlpha = 1;
@@ -262,9 +262,9 @@ export class Renderer {
   // Draw decorative forest elements
   drawDecorations() {
     const decorations = ["🌿", "🍃", "☘️", "🌱"];
-    this.ctx.font = "20px Arial";
+    this.ctx.font = "24px Arial";
     this.ctx.textAlign = "center";
-    this.ctx.globalAlpha = 0.4;
+    this.ctx.globalAlpha = 0.6;
 
     // Fixed positions for decorations (seeded based on position)
     for (let i = 0; i < 15; i++) {

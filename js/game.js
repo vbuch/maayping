@@ -6,10 +6,11 @@ import { AudioManager } from "./audio.js";
 
 // Main game class - handles game loop, state, and coordination
 export class Game {
-  constructor(canvas, language) {
+  constructor(canvas, language, speedMultiplier = 1) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.language = language;
+    this.speedMultiplier = speedMultiplier;
 
     // Game state: 'loading', 'playing', 'paused', 'gameOver', 'victory'
     this.state = "loading";
@@ -21,7 +22,7 @@ export class Game {
     this.audio = new AudioManager();
 
     // Game stats
-    this.currentSpeed = CONFIG.game.baseSpeed;
+    this.currentSpeed = CONFIG.game.baseSpeed * this.speedMultiplier;
     this.lastSpeedTier = 0;
     this.escapedWords = 0;
     this.maxEscapedWords = CONFIG.game.maxEscapedWords;
@@ -138,7 +139,9 @@ export class Game {
     if (tier > this.lastSpeedTier) {
       this.lastSpeedTier = tier;
       this.currentSpeed =
-        CONFIG.game.baseSpeed * Math.pow(CONFIG.game.speedMultiplier, tier);
+        CONFIG.game.baseSpeed *
+        this.speedMultiplier *
+        Math.pow(CONFIG.game.speedMultiplier, tier);
     }
   }
 
@@ -296,7 +299,7 @@ export class Game {
   // Reset the game for replay
   reset() {
     this.wordManager.reset();
-    this.currentSpeed = CONFIG.game.baseSpeed;
+    this.currentSpeed = CONFIG.game.baseSpeed * this.speedMultiplier;
     this.lastSpeedTier = 0;
     this.escapedWords = 0;
     this.flashEffects = [];
