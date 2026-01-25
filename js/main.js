@@ -34,8 +34,8 @@ class App {
       "🦊",
       "🐼",
       "🐸",
-      "🐶",
-      "🐱",
+      "🐕",
+      "🐈",
       "🐰",
       "🦁",
       "🐨",
@@ -140,8 +140,7 @@ class App {
       }
     });
 
-    // Tap/click game screen to re-open keyboard on mobile
-    this.gameScreen.addEventListener("click", () => this.ensureKeyboard());
+    // Tap game screen to re-open keyboard on touch devices
     this.gameScreen.addEventListener("touchstart", () => this.ensureKeyboard());
 
     if (this.mobileKeyboardInput) {
@@ -324,12 +323,14 @@ class App {
   ensureKeyboard() {
     if (!this.mobileKeyboardInput || !this.gameScreen) return;
     if (this.gameScreen.classList.contains("hidden")) return;
+    if (!this.isTouchDevice()) return;
     this.mobileKeyboardInput.value = "";
     this.mobileLastValue = "";
     this.mobileKeyboardInput.focus({ preventScroll: true });
   }
 
   handleMobileInput(event) {
+    if (!this.isTouchDevice()) return;
     if (!this.game || this.game.state !== "playing") return;
     const value = event.target.value || "";
     const data = event.data;
@@ -346,6 +347,7 @@ class App {
   }
 
   handleMobileCompositionEnd(event) {
+    if (!this.isTouchDevice()) return;
     if (!this.game || this.game.state !== "playing") return;
     const data = event.data;
     if (!data) return;
@@ -359,10 +361,17 @@ class App {
   }
 
   handleMobileKeyup(event) {
+    if (!this.isTouchDevice()) return;
     if (!this.game || this.game.state !== "playing") return;
     if (event.key && event.key.length === 1) {
       this.game.handleKeyPress(event.key);
     }
+  }
+
+  isTouchDevice() {
+    return (
+      "ontouchstart" in window || window.matchMedia("(pointer: coarse)").matches
+    );
   }
 
   handleMobileKeydown(event) {
