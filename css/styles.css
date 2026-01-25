@@ -507,6 +507,16 @@ h1 {
   transform: scale(1.1);
 }
 
+.mobile-keyboard-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  top: 0;
+  left: 0;
+}
+
 /* Modal styles */
 .modal {
   position: fixed;

@@ -40,6 +40,7 @@ class App {
     this.pauseModal = document.getElementById("pause-modal");
     this.gameOverModal = document.getElementById("game-over-modal");
     this.canvas = document.getElementById("game-canvas");
+    this.mobileKeyboardInput = document.getElementById("mobile-keyboard");
     this.profileButtons = document.getElementById("profile-buttons");
     this.profileStats = document.getElementById("profile-stats");
     this.profileModal = document.getElementById("profile-modal");
@@ -102,6 +103,10 @@ class App {
       }
     });
 
+    // Tap/click game screen to re-open keyboard on mobile
+    this.gameScreen.addEventListener("click", () => this.ensureKeyboard());
+    this.gameScreen.addEventListener("touchstart", () => this.ensureKeyboard());
+
     // Resume button (in pause modal)
     document.getElementById("resume-btn").addEventListener("click", () => {
       if (this.game) {
@@ -162,6 +167,7 @@ class App {
     try {
       await this.game.initialize();
       this.game.start();
+      this.ensureKeyboard();
     } catch (error) {
       console.error("Failed to start game:", error);
       alert("Failed to load the game. Please refresh and try again.");
@@ -234,6 +240,12 @@ class App {
     this.menuScreen.classList.remove("hidden");
 
     this.currentLanguage = null;
+  }
+
+  ensureKeyboard() {
+    if (!this.mobileKeyboardInput || !this.gameScreen) return;
+    if (this.gameScreen.classList.contains("hidden")) return;
+    this.mobileKeyboardInput.focus({ preventScroll: true });
   }
 
   loadProfiles() {
