@@ -107,6 +107,15 @@ class App {
     this.gameScreen.addEventListener("click", () => this.ensureKeyboard());
     this.gameScreen.addEventListener("touchstart", () => this.ensureKeyboard());
 
+    if (this.mobileKeyboardInput) {
+      this.mobileKeyboardInput.addEventListener("input", (event) =>
+        this.handleMobileInput(event),
+      );
+      this.mobileKeyboardInput.addEventListener("keydown", (event) =>
+        this.handleMobileKeydown(event),
+      );
+    }
+
     // Resume button (in pause modal)
     document.getElementById("resume-btn").addEventListener("click", () => {
       if (this.game) {
@@ -246,6 +255,24 @@ class App {
     if (!this.mobileKeyboardInput || !this.gameScreen) return;
     if (this.gameScreen.classList.contains("hidden")) return;
     this.mobileKeyboardInput.focus({ preventScroll: true });
+  }
+
+  handleMobileInput(event) {
+    if (!this.game || this.game.state !== "playing") return;
+    const value = event.target.value;
+    if (!value) return;
+    for (const char of value) {
+      this.game.handleKeyPress(char);
+    }
+    event.target.value = "";
+  }
+
+  handleMobileKeydown(event) {
+    if (!this.game || this.game.state !== "playing") return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      this.game.handleKeyPress(event.key);
+    }
   }
 
   loadProfiles() {
