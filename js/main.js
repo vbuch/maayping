@@ -41,6 +41,7 @@ class App {
     this.gameOverModal = document.getElementById("game-over-modal");
     this.canvas = document.getElementById("game-canvas");
     this.mobileKeyboardInput = document.getElementById("mobile-keyboard");
+    this.mobileLastValue = "";
     this.profileButtons = document.getElementById("profile-buttons");
     this.profileStats = document.getElementById("profile-stats");
     this.profileModal = document.getElementById("profile-modal");
@@ -110,6 +111,12 @@ class App {
     if (this.mobileKeyboardInput) {
       this.mobileKeyboardInput.addEventListener("input", (event) =>
         this.handleMobileInput(event),
+      );
+      this.mobileKeyboardInput.addEventListener("beforeinput", (event) =>
+        this.handleMobileBeforeInput(event),
+      );
+      this.mobileKeyboardInput.addEventListener("compositionend", (event) =>
+        this.handleMobileCompositionEnd(event),
       );
       this.mobileKeyboardInput.addEventListener("keydown", (event) =>
         this.handleMobileKeydown(event),
@@ -254,17 +261,50 @@ class App {
   ensureKeyboard() {
     if (!this.mobileKeyboardInput || !this.gameScreen) return;
     if (this.gameScreen.classList.contains("hidden")) return;
+    this.mobileKeyboardInput.value = "";
+    this.mobileLastValue = "";
     this.mobileKeyboardInput.focus({ preventScroll: true });
   }
 
   handleMobileInput(event) {
     if (!this.game || this.game.state !== "playing") return;
-    const value = event.target.value;
-    if (!value) return;
-    for (const char of value) {
+    const value = event.target.value || "";
+    const data = event.data;
+    const chars = data
+      ? data
+      : value.startsWith(this.mobileLastValue)
+        ? value.slice(this.mobileLastValue.length)
+        : value;
+    if (!chars) {
+      this.mobileLastValue = value;
+      return;
+    }
+    for (const char of chars) {
       this.game.handleKeyPress(char);
     }
     event.target.value = "";
+    this.mobileLastValue = "";
+  }
+
+  handleMobileBeforeInput(event) {
+    if (!this.game || this.game.state !== "playing") return;
+    if (event.inputType === "insertText" && event.data) {
+      this.game.handleKeyPress(event.data);
+      event.preventDefault();
+    }
+  }
+
+  handleMobileCompositionEnd(event) {
+    if (!this.game || this.game.state !== "playing") return;
+    const data = event.data;
+    if (!data) return;
+    for (const char of data) {
+      this.game.handleKeyPress(char);
+    }
+    if (this.mobileKeyboardInput) {
+      this.mobileKeyboardInput.value = "";
+      this.mobileLastValue = "";
+    }
   }
 
   handleMobileKeydown(event) {
