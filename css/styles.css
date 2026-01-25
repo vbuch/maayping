@@ -73,6 +73,15 @@ body {
   display: block;
 }
 
+#auth-avatar-btn img.hidden {
+  display: none;
+}
+
+#auth-avatar-btn img:not([src]),
+#auth-avatar-btn img[src=""] {
+  display: none;
+}
+
 #auth-avatar-fallback {
   font-size: 22px;
   line-height: 1;
@@ -84,6 +93,39 @@ body {
   padding: 8px;
   min-width: 120px;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+.auth-user-info {
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #d9f8d9;
+  text-align: left;
+}
+
+#auth-user-name {
+  display: block;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#auth-edit-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+#auth-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 #auth-logout-btn {
@@ -298,6 +340,20 @@ h1 {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
+.lang-btn.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+  background: linear-gradient(180deg, #2f6b32 0%, #27552a 100%);
+}
+
+.lang-btn.is-disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: linear-gradient(180deg, #2f6b32 0%, #27552a 100%);
+}
+
 .lang-btn:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
@@ -384,6 +440,20 @@ h1 {
 /* Profile modal */
 .profile-modal {
   min-width: 360px;
+}
+
+.profile-modal.message-mode .profile-form {
+  display: none;
+}
+
+.profile-modal.message-mode .modal-buttons {
+  margin-top: 10px;
+}
+
+.profile-modal-message {
+  font-size: 16px;
+  color: #90ee90;
+  margin-bottom: 18px;
 }
 
 .profile-form {

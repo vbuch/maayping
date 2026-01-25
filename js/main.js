@@ -26,8 +26,9 @@ class App {
     this.game = null;
     this.currentLanguage = null;
     this.currentSpeedMultiplier = 1;
-    this.selectedProfileId = null;
-    this.profiles = [];
+    this.profile = null;
+    this.profileId = "default";
+    this.profileLoaded = false;
     this.emojiChoices = [
       "🦫",
       "🐻",
@@ -59,19 +60,24 @@ class App {
     this.canvas = document.getElementById("game-canvas");
     this.mobileKeyboardInput = document.getElementById("mobile-keyboard");
     this.mobileLastValue = "";
-    this.profileButtons = document.getElementById("profile-buttons");
-    this.profileStats = document.getElementById("profile-stats");
     this.profileModal = document.getElementById("profile-modal");
+    this.profileModalContent = document.getElementById("profile-modal-content");
+    this.profileModalTitle = document.getElementById("profile-modal-title");
+    this.profileModalMessage = document.getElementById("profile-modal-message");
     this.profileNameInput = document.getElementById("profile-name");
     this.emojiGrid = document.getElementById("emoji-grid");
     this.createProfileBtn = document.getElementById("create-profile-btn");
     this.cancelProfileBtn = document.getElementById("cancel-profile-btn");
     this.selectedEmoji = null;
+    this.profileModalMode = "edit";
+    this.profileModalAction = "save";
     this.authAvatar = document.getElementById("auth-avatar");
     this.authAvatarBtn = document.getElementById("auth-avatar-btn");
     this.authAvatarImg = document.getElementById("auth-avatar-img");
     this.authAvatarFallback = document.getElementById("auth-avatar-fallback");
     this.authAvatarMenu = document.getElementById("auth-avatar-menu");
+    this.authUserName = document.getElementById("auth-user-name");
+    this.authEditBtn = document.getElementById("auth-edit-btn");
     this.authLogoutBtn = document.getElementById("auth-logout-btn");
 
     this.authUser = null;
@@ -81,18 +87,14 @@ class App {
     this.syncTimerId = null;
     this.syncThrottleMs = 1000;
     this.isManualSignOut = false;
-    this.isSwitchingProfileLogin = false;
-    this.logoutUid = null;
 
-    this.loadProfiles();
-    this.normalizeProfiles();
-    this.renderProfiles();
     this.renderEmojiGrid();
     this.applyProfileDifficulty();
 
     this.initializeFirebase();
 
     this.setupEventListeners();
+    this.updatePlayAvailability();
   }
 
   // Set up all UI event listeners
@@ -125,9 +127,9 @@ class App {
       });
     });
 
-    // Profile create/cancel buttons
+    // Profile modal buttons
     this.createProfileBtn.addEventListener("click", () =>
-      this.handleCreateProfile(),
+      this.handleProfileModalPrimaryAction(),
     );
     this.cancelProfileBtn.addEventListener("click", () =>
       this.closeProfileModal(),
@@ -188,9 +190,20 @@ class App {
     });
 
     if (this.authAvatarBtn) {
-      this.authAvatarBtn.addEventListener("click", (event) => {
+      this.authAvatarBtn.addEventListener("click", async (event) => {
         event.stopPropagation();
+        if (!this.authUser) {
+          await this.handleLogin();
+          return;
+        }
         this.toggleAvatarMenu();
+      });
+    }
+
+    if (this.authEditBtn) {
+      this.authEditBtn.addEventListener("click", async () => {
+        this.closeAvatarMenu();
+        await this.openProfileModal("edit");
       });
     }
 
@@ -201,9 +214,7 @@ class App {
     }
 
     document.addEventListener("click", (event) => {
-      if (!this.authAvatar || this.authAvatar.classList.contains("hidden")) {
-        return;
-      }
+      if (!this.authAvatar) return;
       if (this.authAvatar.contains(event.target)) return;
       this.closeAvatarMenu();
     });
@@ -211,9 +222,17 @@ class App {
 
   // Start a new game with selected language
   async startGame(language) {
-    if (this.selectedProfileId) {
-      const ok = await this.ensureProfileLogin(this.selectedProfileId, false);
-      if (!ok) return;
+    if (!this.authUser) {
+      this.showLoginRequiredMessage();
+      return;
+    }
+
+    if (!this.profileLoaded) {
+      await this.loadUserProfile();
+      if (!this.profileLoaded) {
+        this.showLoginRequiredMessage();
+        return;
+      }
     }
 
     this.currentLanguage = language;
@@ -230,7 +249,7 @@ class App {
     }
 
     // Create and initialize new game
-    const playerEmoji = this.getSelectedProfileEmoji();
+    const playerEmoji = this.getProfileEmoji();
     this.game = new Game(
       this.canvas,
       language,
@@ -382,30 +401,19 @@ class App {
     }
   }
 
-  loadProfiles() {
-    const raw = localStorage.getItem("maaypingProfiles");
-    const selected = localStorage.getItem("maaypingSelectedProfile");
-    this.profiles = raw ? JSON.parse(raw) : [];
-    this.selectedProfileId = selected || (this.profiles[0]?.id ?? null);
-  }
-
-  saveProfiles() {
-    localStorage.setItem("maaypingProfiles", JSON.stringify(this.profiles));
-    if (this.selectedProfileId) {
-      localStorage.setItem("maaypingSelectedProfile", this.selectedProfileId);
-    } else {
-      localStorage.removeItem("maaypingSelectedProfile");
-    }
-  }
-
-  normalizeProfiles() {
-    this.profiles = (this.profiles ?? []).map((profile) =>
-      this.normalizeProfile(profile),
-    );
+  createDefaultProfile() {
+    return {
+      id: this.profileId,
+      name: this.authUser?.displayName || "Player",
+      emoji: "🦫",
+      lastDifficulty: 1,
+      stats: [],
+      maxSummary: {},
+    };
   }
 
   normalizeProfile(profile) {
-    const normalized = { ...profile };
+    const normalized = { ...this.createDefaultProfile(), ...profile };
     normalized.stats = Array.isArray(profile.stats) ? profile.stats : [];
     normalized.stats = normalized.stats.map((entry) => ({
       id: entry.id || this.generateId(),
@@ -420,7 +428,6 @@ class App {
     normalized.maxSummary =
       profile.maxSummary ?? this.buildMaxSummaryFromStats(normalized.stats);
     normalized.lastDifficulty = profile.lastDifficulty ?? 1;
-    normalized.authUid = profile.authUid ?? null;
     return normalized;
   }
 
@@ -431,135 +438,10 @@ class App {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
-  renderProfiles() {
-    if (!this.profileButtons) return;
-    this.profileButtons.innerHTML = "";
-
-    this.profiles.forEach((profile) => {
-      const button = document.createElement("button");
-      button.className = "profile-btn";
-      if (profile.id === this.selectedProfileId) {
-        button.classList.add("selected");
-      }
-      button.title = profile.name;
-      button.textContent = profile.emoji;
-      button.addEventListener("click", () =>
-        this.handleProfileClick(profile.id),
-      );
-      this.profileButtons.appendChild(button);
-    });
-
-    const addButton = document.createElement("button");
-    addButton.className = "profile-btn add";
-    addButton.textContent = "+";
-    addButton.addEventListener("click", () => this.openProfileModal());
-    this.profileButtons.appendChild(addButton);
-  }
-
-  async handleProfileClick(profileId) {
-    const isSame = profileId === this.selectedProfileId;
-    const ok = await this.ensureProfileLogin(profileId, true);
-    if (!ok) return;
-    if (isSame) {
-      this.toggleProfileStats();
-      return;
-    }
-    this.selectProfile(profileId);
-  }
-
-  selectProfile(profileId) {
-    this.selectedProfileId = profileId;
-    this.saveProfiles();
-    this.renderProfiles();
-    this.applyProfileDifficulty();
-    if (this.profileStats) {
-      this.profileStats.classList.add("hidden");
-    }
-    this.queueProfileSync(profileId);
-  }
-
-  toggleProfileStats() {
-    if (!this.profileStats) return;
-    const isHidden = this.profileStats.classList.contains("hidden");
-    if (isHidden) {
-      this.showProfileStats(this.selectedProfileId, true);
-    } else {
-      this.profileStats.classList.add("hidden");
-    }
-  }
-
-  showProfileStats(profileId, forceShow = false) {
-    if (!this.profileStats || !profileId) return;
-    const profile = this.profiles.find((p) => p.id === profileId);
-    if (!profile) return;
-
-    const stats = profile.stats ?? [];
-    const recent = this.getRecentStats(stats, 20);
-    const maxWords = stats.reduce(
-      (max, entry) => Math.max(max, entry.wordsTyped ?? 0),
-      0,
-    );
-    const maxAccuracy = stats.reduce(
-      (max, entry) => Math.max(max, entry.accuracy ?? 0),
-      0,
-    );
-    const maxSummary =
-      profile.maxSummary ?? this.buildMaxSummaryFromStats(stats);
-    const maxEntries = this.flattenMaxSummary(maxSummary);
-
-    const listItems = recent
-      .map((entry) => {
-        const isMaxScore = entry.wordsTyped === maxWords && maxWords > 0;
-        const isMaxAcc = entry.accuracy === maxAccuracy && maxAccuracy > 0;
-        const timeLabel = entry.time || "⏳";
-        const langLabel = this.formatLanguageLabel(entry.language);
-        const difficultyLabel = this.formatDifficultyLabel(entry.difficulty);
-        const metaLabel = `${langLabel} • ${difficultyLabel}`.trim();
-        return `
-          <li>
-            <div class="stat-line">
-              <span>${timeLabel}</span>
-              <span>${metaLabel}</span>
-              <span class="stat-score${isMaxScore ? " stat-highlight" : ""}">Words: ${entry.wordsTyped}</span>
-            </div>
-            <span class="stat-accuracy${isMaxAcc ? " stat-highlight" : ""}">${entry.accuracy}%</span>
-          </li>
-        `;
-      })
-      .join("");
-
-    const maxListItems = maxEntries
-      .map((entry) => {
-        const langLabel = this.formatLanguageLabel(entry.language);
-        const difficultyLabel = this.formatDifficultyLabel(entry.difficulty);
-        const metaLabel = `${langLabel} • ${difficultyLabel}`.trim();
-        return `
-          <li>
-            <div class="stat-line">
-              <span>${metaLabel}</span>
-              <span class="stat-score stat-highlight">Words: ${entry.wordsTyped}</span>
-            </div>
-            <span class="stat-accuracy">${entry.accuracy}%</span>
-          </li>
-        `;
-      })
-      .join("");
-
-    const title = `Stats for ${profile.name}`;
-    this.profileStats.innerHTML = `
-      <h4>${title}</h4>
-      ${recent.length ? `<ul>${listItems}</ul>` : `<div>No games yet.</div>`}
-      ${maxEntries.length ? `<h4>Max records</h4><ul>${maxListItems}</ul>` : ""}
-    `;
-
-    if (forceShow) {
-      this.profileStats.classList.remove("hidden");
-    }
-  }
+  renderProfiles() {}
 
   applyProfileDifficulty() {
-    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
-    const multiplier = profile?.lastDifficulty ?? 1;
+    const multiplier = this.profile?.lastDifficulty ?? 1;
     this.currentSpeedMultiplier = multiplier;
     this.setDifficultySelection(multiplier);
   }
@@ -576,11 +458,9 @@ class App {
   }
 
   persistProfileDifficulty() {
-    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
-    if (!profile) return;
-    profile.lastDifficulty = this.currentSpeedMultiplier;
-    this.saveProfiles();
-    this.queueProfileSync(profile.id);
+    if (!this.profile) return;
+    this.profile.lastDifficulty = this.currentSpeedMultiplier;
+    this.queueProfileSync();
   }
 
   renderEmojiGrid() {
@@ -604,42 +484,114 @@ class App {
     this.selectedEmoji = this.emojiChoices[index] ?? null;
   }
 
-  openProfileModal() {
-    this.profileNameInput.value = "";
+  selectEmojiByValue(value) {
+    const index = this.emojiChoices.findIndex((emoji) => emoji === value);
+    if (index >= 0) {
+      this.selectEmoji(index);
+    }
+  }
+
+  async openProfileModal(mode = "edit", message = "") {
+    if (!this.profileModal) return;
+    this.profileModalMode = mode;
+    this.profileModalAction = mode === "message" ? "login" : "save";
+
+    if (this.profileModalContent) {
+      this.profileModalContent.classList.toggle(
+        "message-mode",
+        mode === "message",
+      );
+    }
+
+    if (this.profileModalTitle) {
+      this.profileModalTitle.textContent =
+        mode === "message" ? "Login required" : "Edit Profile";
+    }
+
+    if (this.profileModalMessage) {
+      if (mode === "message") {
+        this.profileModalMessage.textContent = message;
+        this.profileModalMessage.classList.remove("hidden");
+      } else {
+        this.profileModalMessage.textContent = "";
+        this.profileModalMessage.classList.add("hidden");
+      }
+    }
+
+    if (mode === "edit") {
+      if (!this.authUser) {
+        this.showLoginRequiredMessage();
+        return;
+      }
+      if (!this.profileLoaded) {
+        await this.loadUserProfile();
+      }
+      const fallbackName = this.authUser.displayName || "";
+      this.profileNameInput.value = this.profile?.name ?? fallbackName;
+      const emoji = this.profile?.emoji ?? this.selectedEmoji;
+      if (emoji) {
+        this.selectEmojiByValue(emoji);
+      }
+      this.createProfileBtn.textContent = "Save";
+      this.cancelProfileBtn.classList.remove("hidden");
+    } else {
+      this.createProfileBtn.textContent = "Login";
+      this.cancelProfileBtn.textContent = "Cancel";
+      this.cancelProfileBtn.classList.remove("hidden");
+    }
+
     this.profileModal.classList.remove("hidden");
   }
 
   closeProfileModal() {
     this.profileModal.classList.add("hidden");
+    if (this.profileModalContent) {
+      this.profileModalContent.classList.remove("message-mode");
+    }
+    if (this.cancelProfileBtn) {
+      this.cancelProfileBtn.classList.remove("hidden");
+    }
   }
 
-  async handleCreateProfile() {
+  async handleProfileModalPrimaryAction() {
+    if (this.profileModalMode === "message") {
+      this.closeProfileModal();
+      await this.handleLogin();
+      return;
+    }
+    await this.handleSaveProfile();
+  }
+
+  async handleSaveProfile() {
     const name = this.profileNameInput.value.trim();
     if (!name || !this.selectedEmoji) return;
+    if (!this.authUser) {
+      this.showLoginRequiredMessage();
+      return;
+    }
 
-    const user = await this.promptFreshLogin();
-    if (!user) return;
-
-    const profile = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    const profile = this.profile ?? {
+      id: this.profileId,
       name,
       emoji: this.selectedEmoji,
       lastDifficulty: this.currentSpeedMultiplier,
       stats: [],
       maxSummary: {},
-      authUid: user.uid,
     };
 
-    this.profiles.push(profile);
-    this.selectedProfileId = profile.id;
-    this.saveProfiles();
-    this.renderProfiles();
+    profile.name = name;
+    profile.emoji = this.selectedEmoji;
+    profile.lastDifficulty = this.currentSpeedMultiplier;
+    this.profile = profile;
+
     this.closeProfileModal();
-    this.queueProfileSync(profile.id);
+    this.updateAuthAvatar();
+    this.updatePlayAvailability();
+    await this.syncProfileMetadata(profile);
   }
 
   saveProfileStats(result) {
-    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
+    const profile = this.profile;
     if (!profile) return;
     const entry = {
       id: this.generateId(),
@@ -654,15 +606,13 @@ class App {
     profile.stats.unshift(entry);
     profile.maxSummary = profile.maxSummary ?? {};
     this.updateMaxSummary(profile, entry);
-    this.saveProfiles();
-    this.showProfileStats(profile.id, true);
+    this.profile = profile;
     this.syncStatEntry(profile, entry);
     this.syncMaxSummary(profile);
   }
 
-  getSelectedProfileEmoji() {
-    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
-    return profile?.emoji ?? "🦫";
+  getProfileEmoji() {
+    return this.profile?.emoji ?? "🦫";
   }
 
   formatTimestamp(date) {
@@ -676,101 +626,107 @@ class App {
   }
 
   initializeFirebase() {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       this.authUser = user;
-      this.updateAuthAvatar(user);
+      this.profileLoaded = false;
       if (!user) {
-        if (this.isManualSignOut) {
-          this.clearLocalProfiles(this.logoutUid);
-          this.logoutUid = null;
-        } else if (!this.isSwitchingProfileLogin) {
-          this.attemptAutoSignIn();
-        }
+        this.profile = null;
+        this.updateAuthAvatar();
+        this.updatePlayAvailability();
+        this.closeAvatarMenu();
         return;
       }
       this.isManualSignOut = false;
-      this.isSwitchingProfileLogin = false;
-      this.queueProfileSync(this.selectedProfileId);
+      await this.loadUserProfile();
+      this.updateAuthAvatar();
+      this.updatePlayAvailability();
     });
   }
 
-  attemptAutoSignIn() {
-    signInWithPopup(auth, provider).catch((error) => {
-      console.warn("Firebase popup sign-in failed:", error);
-    });
-  }
-
-  async promptFreshLogin() {
-    this.isSwitchingProfileLogin = true;
+  async handleLogin() {
     try {
-      if (auth.currentUser) {
-        await signOut(auth);
-      }
       provider.setCustomParameters({ prompt: "select_account" });
-      const result = await signInWithPopup(auth, provider);
-      this.authUser = result.user;
-      this.updateAuthAvatar(result.user);
-      return result.user;
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.warn("Firebase popup sign-in failed:", error);
-      return null;
-    } finally {
-      this.isSwitchingProfileLogin = false;
     }
   }
 
-  async ensureProfileLogin(profileId, forceFreshLogin) {
-    const profile = this.profiles.find((p) => p.id === profileId);
-    if (!profile) return false;
-
-    if (
-      !forceFreshLogin &&
-      this.authUser &&
-      (!profile.authUid || profile.authUid === this.authUser.uid)
-    ) {
-      if (!profile.authUid) {
-        profile.authUid = this.authUser.uid;
-        this.saveProfiles();
-      }
-      return true;
+  async loadUserProfile() {
+    if (!this.authUser) return;
+    try {
+      const profile = this.normalizeProfile(this.createDefaultProfile());
+      await this.fetchProfileRemoteData(profile);
+      this.profile = profile;
+      this.profileLoaded = true;
+      this.applyProfileDifficulty();
+    } catch (error) {
+      console.warn("Failed to load remote profile:", error);
+      this.profileLoaded = false;
     }
-
-    const user = await this.promptFreshLogin();
-    if (!user) return false;
-
-    if (profile.authUid && profile.authUid !== user.uid) {
-      alert("This profile is linked to a different Google account.");
-      return false;
-    }
-
-    profile.authUid = user.uid;
-    this.saveProfiles();
-    return true;
   }
 
-  updateAuthAvatar(user) {
+  showLoginRequiredMessage() {
+    this.openProfileModal(
+      "message",
+      "Please log in using the avatar button to start playing.",
+    );
+  }
+
+  updatePlayAvailability() {
+    const enabled = Boolean(this.authUser);
+    const langButtons = document.querySelectorAll(".lang-btn");
+    langButtons.forEach((btn) => {
+      btn.classList.toggle("is-disabled", !enabled);
+      btn.setAttribute("aria-disabled", String(!enabled));
+    });
+  }
+
+  updateAuthAvatar() {
     if (!this.authAvatar) return;
-    if (!user) {
-      this.authAvatar.classList.add("hidden");
-      this.closeAvatarMenu();
+
+    if (!this.authUser) {
+      if (this.authAvatarBtn) {
+        this.authAvatarBtn.title = "Log in";
+      }
       if (this.authAvatarImg) {
         this.authAvatarImg.removeAttribute("src");
+        this.authAvatarImg.classList.add("hidden");
       }
       if (this.authAvatarFallback) {
+        this.authAvatarFallback.textContent = "👤";
         this.authAvatarFallback.classList.remove("hidden");
+      }
+      if (this.authUserName) {
+        this.authUserName.textContent = "Not signed in";
       }
       return;
     }
 
-    this.authAvatar.classList.remove("hidden");
-    if (this.authAvatarImg && user.photoURL) {
-      this.authAvatarImg.src = user.photoURL;
-      this.authAvatarImg.alt = user.displayName || "Avatar";
+    const displayName =
+      this.profile?.name || this.authUser.displayName || "Player";
+    if (this.authAvatarBtn) {
+      this.authAvatarBtn.title = displayName;
+    }
+    if (this.authAvatarImg && this.authUser.photoURL) {
+      this.authAvatarImg.src = this.authUser.photoURL;
+      this.authAvatarImg.alt = displayName;
+      this.authAvatarImg.classList.remove("hidden");
       if (this.authAvatarFallback) {
         this.authAvatarFallback.classList.add("hidden");
       }
-    } else if (this.authAvatarFallback) {
-      this.authAvatarFallback.classList.remove("hidden");
+    } else {
+      if (this.authAvatarImg) {
+        this.authAvatarImg.removeAttribute("src");
+        this.authAvatarImg.classList.add("hidden");
+      }
+      if (this.authAvatarFallback) {
+        this.authAvatarFallback.textContent = this.getProfileEmoji();
+        this.authAvatarFallback.classList.remove("hidden");
+      }
+    }
+    if (this.authUserName) {
+      this.authUserName.textContent = displayName;
     }
   }
 
@@ -787,7 +743,6 @@ class App {
   async handleLogout() {
     this.closeAvatarMenu();
     this.isManualSignOut = true;
-    this.logoutUid = this.authUser?.uid ?? null;
     await this.syncBeforeLogout();
     try {
       await signOut(auth);
@@ -799,13 +754,9 @@ class App {
   async syncBeforeLogout() {
     if (!this.authUser) return;
     await this.runSyncTask(async () => {
-      for (const profile of this.profiles) {
-        if (profile.authUid && profile.authUid !== this.authUser.uid) {
-          continue;
-        }
-        await this.syncProfileMetadata(profile);
-        await this.syncMaxSummary(profile);
-      }
+      if (!this.profile) return;
+      await this.syncProfileMetadata(this.profile);
+      await this.syncMaxSummary(this.profile);
     });
   }
 
@@ -842,13 +793,13 @@ class App {
     }
   }
 
-  queueProfileSync(profileId) {
-    if (!this.authUser || !profileId) return;
+  queueProfileSync() {
+    if (!this.authUser || !this.profile) return;
     const now = Date.now();
     const elapsed = now - this.lastSyncAt;
     if (elapsed >= this.syncThrottleMs) {
       this.lastSyncAt = now;
-      this.syncProfile(profileId);
+      this.syncProfile();
       return;
     }
 
@@ -858,21 +809,16 @@ class App {
 
     this.syncTimerId = setTimeout(() => {
       this.lastSyncAt = Date.now();
-      this.syncProfile(profileId);
+      this.syncProfile();
     }, this.syncThrottleMs - elapsed);
   }
 
-  syncProfile(profileId) {
-    const profile = this.profiles.find((p) => p.id === profileId);
+  syncProfile() {
+    const profile = this.profile;
     if (!this.authUser || !profile) return;
-    if (profile.authUid && profile.authUid !== this.authUser.uid) return;
-    if (!profile.authUid) {
-      profile.authUid = this.authUser.uid;
-    }
     this.runSyncTask(async () => {
       await this.syncProfileMetadata(profile);
-      await this.fetchProfileRemoteData(profileId);
-      this.saveProfiles();
+      await this.fetchProfileRemoteData(profile);
     });
   }
 
@@ -898,7 +844,6 @@ class App {
 
   async syncStatEntry(profile, entry) {
     if (!this.authUser) return;
-    if (profile.authUid && profile.authUid !== this.authUser.uid) return;
     this.runSyncTask(async () => {
       const statRef = doc(
         db,
@@ -925,7 +870,6 @@ class App {
 
   async syncMaxSummary(profile) {
     if (!this.authUser) return;
-    if (profile.authUid && profile.authUid !== this.authUser.uid) return;
     this.runSyncTask(async () => {
       const summaryRef = doc(
         db,
@@ -947,17 +891,15 @@ class App {
     });
   }
 
-  async fetchProfileRemoteData(profileId) {
-    if (!this.authUser) return;
-    const profile = this.profiles.find((p) => p.id === profileId);
-    if (!profile) return;
+  async fetchProfileRemoteData(profile) {
+    if (!this.authUser || !profile) return;
 
     const profileRef = doc(
       db,
       "users",
       this.authUser.uid,
       "profiles",
-      profileId,
+      profile.id,
     );
     const profileSnap = await getDoc(profileRef);
     if (profileSnap.exists()) {
@@ -972,7 +914,7 @@ class App {
       "users",
       this.authUser.uid,
       "profiles",
-      profileId,
+      profile.id,
       "summary",
       "max",
     );
@@ -990,7 +932,7 @@ class App {
         "users",
         this.authUser.uid,
         "profiles",
-        profileId,
+        profile.id,
         "stats",
       ),
       orderBy("createdAt", "desc"),
@@ -1109,30 +1051,6 @@ class App {
   formatDifficultyLabel(value) {
     if (!value) return "1x";
     return `${value}x`;
-  }
-
-  clearLocalProfiles(uid) {
-    if (uid) {
-      this.profiles = this.profiles.filter(
-        (profile) => profile.authUid && profile.authUid !== uid,
-      );
-    } else {
-      this.profiles = [];
-    }
-
-    const selectedStillExists = this.profiles.some(
-      (profile) => profile.id === this.selectedProfileId,
-    );
-    if (!selectedStillExists) {
-      this.selectedProfileId = this.profiles[0]?.id ?? null;
-    }
-
-    this.saveProfiles();
-    this.renderProfiles();
-    this.applyProfileDifficulty();
-    if (this.profileStats) {
-      this.profileStats.classList.add("hidden");
-    }
   }
 }
 
