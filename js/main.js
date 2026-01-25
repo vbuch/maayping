@@ -112,14 +112,14 @@ class App {
       this.mobileKeyboardInput.addEventListener("input", (event) =>
         this.handleMobileInput(event),
       );
-      this.mobileKeyboardInput.addEventListener("beforeinput", (event) =>
-        this.handleMobileBeforeInput(event),
-      );
       this.mobileKeyboardInput.addEventListener("compositionend", (event) =>
         this.handleMobileCompositionEnd(event),
       );
       this.mobileKeyboardInput.addEventListener("keydown", (event) =>
         this.handleMobileKeydown(event),
+      );
+      this.mobileKeyboardInput.addEventListener("keyup", (event) =>
+        this.handleMobileKeyup(event),
       );
     }
 
@@ -270,11 +270,7 @@ class App {
     if (!this.game || this.game.state !== "playing") return;
     const value = event.target.value || "";
     const data = event.data;
-    const chars = data
-      ? data
-      : value.startsWith(this.mobileLastValue)
-        ? value.slice(this.mobileLastValue.length)
-        : value;
+    const chars = data || value;
     if (!chars) {
       this.mobileLastValue = value;
       return;
@@ -284,14 +280,6 @@ class App {
     }
     event.target.value = "";
     this.mobileLastValue = "";
-  }
-
-  handleMobileBeforeInput(event) {
-    if (!this.game || this.game.state !== "playing") return;
-    if (event.inputType === "insertText" && event.data) {
-      this.game.handleKeyPress(event.data);
-      event.preventDefault();
-    }
   }
 
   handleMobileCompositionEnd(event) {
@@ -304,6 +292,13 @@ class App {
     if (this.mobileKeyboardInput) {
       this.mobileKeyboardInput.value = "";
       this.mobileLastValue = "";
+    }
+  }
+
+  handleMobileKeyup(event) {
+    if (!this.game || this.game.state !== "playing") return;
+    if (event.key && event.key.length === 1) {
+      this.game.handleKeyPress(event.key);
     }
   }
 
