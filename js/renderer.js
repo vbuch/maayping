@@ -35,6 +35,7 @@ export class Renderer {
 
     // Animation state
     this.scrollOffset = 0;
+    this.parallaxOffset = 0;
     this.beaverTimer = 0;
     this.time = 0;
 
@@ -53,17 +54,21 @@ export class Renderer {
     const passingAnimals = [];
 
     const treeEmojis = ["🌲", "🌳", "🌴"];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       const seed = i * 91 + 17;
+      const depth = this.seededRange(seed + 3, 0.15, 1);
       const x = this.seededRange(seed, 40, this.width - 40);
-      const y = this.seededRange(seed + 5, 60, this.height - 220);
-      const size = this.seededRange(seed + 11, 46, 70);
-      const alpha = this.seededRange(seed + 23, 0.2, 0.4);
+      const baseY = this.seededRange(seed + 5, -40, this.height - 120);
+      const size = 34 + depth * 62;
+      const alpha = 0.15 + depth * 0.55;
+      const parallax = 0.35 + depth * 0.95;
       backgroundTrees.push({
         x,
-        y,
+        baseY,
         size,
         alpha,
+        parallax,
+        depth,
         emoji: treeEmojis[i % treeEmojis.length],
       });
     }
@@ -139,6 +144,7 @@ export class Renderer {
   // Update scroll position for forest movement illusion
   updateScroll(deltaTime, speed) {
     this.scrollOffset += speed * deltaTime;
+    this.parallaxOffset += speed * deltaTime;
     // Reset offset to prevent huge numbers
     if (this.scrollOffset >= 100) {
       this.scrollOffset -= 100;
@@ -188,13 +194,18 @@ export class Renderer {
   // Draw distant background trees
   drawBackgroundTrees() {
     const { backgroundTrees } = this.ambientElements;
-    backgroundTrees.forEach((tree) => {
+    const sortedTrees = [...backgroundTrees].sort((a, b) => a.depth - b.depth);
+    sortedTrees.forEach((tree) => {
       this.ctx.globalAlpha = tree.alpha;
       this.ctx.font = `${tree.size}px Arial`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
       const sway = Math.sin(this.time * 0.6 + tree.x * 0.02) * 2;
-      this.ctx.fillText(tree.emoji, tree.x + sway, tree.y);
+      const scrolledY = tree.baseY + this.parallaxOffset * tree.parallax;
+      if (scrolledY < -80 || scrolledY > this.height + 80) {
+        return;
+      }
+      this.ctx.fillText(tree.emoji, tree.x + sway, scrolledY);
     });
     this.ctx.globalAlpha = 1;
   }

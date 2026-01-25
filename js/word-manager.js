@@ -66,10 +66,24 @@ export class WordManager {
 
   // Spawn a new word
   spawnWord() {
-    const text = this.dictionary.getRandomWordExcluding(this.language, [
+    const excludeList = [
       ...this.recentWords,
       ...this.activeWords.map((w) => w.text),
-    ]);
+    ];
+    const shouldLimitLength = this.totalSpawned < 100;
+    const lengthFilter = shouldLimitLength
+      ? (word) => {
+          const letters = word.match(/[a-zA-Z\u0400-\u04FF]/g);
+          const length = letters ? letters.length : 0;
+          return length >= 3 && length <= 5;
+        }
+      : null;
+
+    const text = this.dictionary.getRandomWordExcluding(
+      this.language,
+      excludeList,
+      lengthFilter,
+    );
 
     // Calculate random X position with padding
     const padding = CONFIG.words.padding;
