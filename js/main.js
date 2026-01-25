@@ -838,6 +838,7 @@ class App {
         "aria-disabled",
         String(Boolean(this.authUser)),
       );
+      this.footerLoginBtn.classList.toggle("hidden", Boolean(this.authUser));
       this.footerLoginBtn.title = this.authUser ? "You're logged in" : "Log in";
     }
     if (this.footerProfileBtn) {
@@ -961,8 +962,6 @@ class App {
   }
 
   updateAuthAvatar() {
-    if (!this.authAvatar) return;
-
     if (!this.authUser) {
       if (this.allowAnonymous) {
         const displayName = this.profile?.name || "Guest";
@@ -980,6 +979,7 @@ class App {
         if (this.authUserName) {
           this.authUserName.textContent = displayName;
         }
+        this.updateTitleEmoji();
         return;
       }
       if (this.authAvatarBtn) {
@@ -996,6 +996,7 @@ class App {
       if (this.authUserName) {
         this.authUserName.textContent = "Not signed in";
       }
+      this.updateTitleEmoji();
       return;
     }
 
