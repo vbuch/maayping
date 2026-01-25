@@ -8,7 +8,7 @@ export const CONFIG = {
   game: {
     totalWords: 200, // Words to complete for victory
     wordsPerSpeedIncrease: 15, // Speed increases every N words
-    wordsPerCelebration: 50, // Beaver celebrates every N words
+    wordsPerCelebration: 50, // Character celebrates every N words
     baseSpeed: 50, // Base scroll speed (pixels/second)
     speedMultiplier: 1.15, // Speed multiplier per tier (15% faster)
     maxActiveWords: 5, // Maximum words on screen at once
@@ -31,9 +31,9 @@ export const CONFIG = {
     backgroundDark: "#1A5A1A", // Darker green for gradient
   },
 
-  beaver: {
+  character: {
     emoji: "🦫",
-    size: 60, // Font size for beaver emoji
+    size: 60, // Font size for character emoji
     bobSpeed: 2, // Walking bob animation speed
     bobAmount: 3, // Pixels to bob up/down
   },

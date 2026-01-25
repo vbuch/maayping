@@ -248,9 +248,9 @@ export class WordManager {
     return { type: "none" };
   }
 
-  // Check if any word has passed the fail line (reached the beaver)
+  // Check if any word has passed the fail line (reached the leaf)
   checkForFailedWord() {
-    const failLine = CONFIG.canvas.height - 80; // Above beaver
+    const failLine = CONFIG.canvas.height - 80; // Above leaf
 
     for (const word of this.activeWords) {
       // Word fails if it reaches the fail line AND hasn't been started
@@ -264,7 +264,7 @@ export class WordManager {
 
   // Check for and remove any escaped word (returns the word if found)
   checkAndRemoveEscapedWord() {
-    const failLine = CONFIG.canvas.height - 80; // Above beaver
+    const failLine = CONFIG.canvas.height - 80; // Above leaf
 
     for (let i = 0; i < this.activeWords.length; i++) {
       const word = this.activeWords[i];

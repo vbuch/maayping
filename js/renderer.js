@@ -36,7 +36,7 @@ export class Renderer {
     // Animation state
     this.scrollOffset = 0;
     this.parallaxOffset = 0;
-    this.beaverTimer = 0;
+    this.characterTimer = 0;
     this.time = 0;
 
     // Pre-create gradient for performance
@@ -154,7 +154,7 @@ export class Renderer {
   // Update animation timers
   updateAnimations(deltaTime) {
     this.time += deltaTime;
-    this.beaverTimer += deltaTime;
+    this.characterTimer += deltaTime;
   }
 
   // Clear the canvas
@@ -383,23 +383,29 @@ export class Renderer {
     this.ctx.stroke();
   }
 
-  // Draw the beaver at the bottom center
-  drawBeaver(livesRemaining = 5, maxLives = 5, isCelebrating = false) {
-    const emoji = CONFIG.beaver.emoji;
-    const size = CONFIG.beaver.size;
+  // Draw the player character at the bottom center
+  drawPlayer(
+    livesRemaining = 5,
+    maxLives = 5,
+    isCelebrating = false,
+    playerEmoji = "🦫",
+  ) {
+    const emoji = playerEmoji || CONFIG.character.emoji;
+    const size = CONFIG.character.size;
     const x = this.width / 2;
     const baseY = this.height - 50;
 
     // Walking bob animation (faster and bigger when celebrating)
     const bobAmount = isCelebrating
-      ? CONFIG.beaver.bobAmount * 3
-      : CONFIG.beaver.bobAmount;
+      ? CONFIG.character.bobAmount * 3
+      : CONFIG.character.bobAmount;
     const bobSpeed = isCelebrating
-      ? CONFIG.beaver.bobSpeed * 3
-      : CONFIG.beaver.bobSpeed;
-    const bob = Math.sin(this.beaverTimer * bobSpeed * Math.PI * 2) * bobAmount;
+      ? CONFIG.character.bobSpeed * 3
+      : CONFIG.character.bobSpeed;
+    const bob =
+      Math.sin(this.characterTimer * bobSpeed * Math.PI * 2) * bobAmount;
 
-    // Draw the leaf platform first (behind beaver)
+    // Draw the leaf platform first (behind player)
     this.drawLeafPlatform(x, baseY + 25, livesRemaining, maxLives);
 
     // Celebration effects
@@ -416,7 +422,7 @@ export class Renderer {
     this.ctx.fillText(emoji, x + 3, baseY + bob + 3);
     this.ctx.globalAlpha = 1;
 
-    // Draw beaver
+    // Draw player character
     this.ctx.fillText(emoji, x, baseY + bob);
 
     // Draw happy face overlay when celebrating
@@ -501,14 +507,7 @@ export class Renderer {
   }
 
   // Draw the HUD (progress, score, lives)
-  drawHUD(
-    completed,
-    total,
-    currentSpeed,
-    livesRemaining = 5,
-    maxLives = 5,
-    playerEmoji = "🦫",
-  ) {
+  drawHUD(completed, total, currentSpeed, livesRemaining = 5, maxLives = 5) {
     // Progress bar background
     const barX = 20;
     const barY = 20;
@@ -561,25 +560,8 @@ export class Renderer {
       );
     }
 
-    // Draw player emoji badge (top left)
-    this.drawPlayerBadge(playerEmoji, barX + barWidth + 15, barY + 2);
-
     // Draw lives indicator (top right)
     this.drawLivesIndicator(livesRemaining, maxLives);
-  }
-
-  // Draw player emoji badge
-  drawPlayerBadge(emoji, x, y) {
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
-    this.ctx.beginPath();
-    this.ctx.roundRect(x, y, 34, 28, 8);
-    this.ctx.fill();
-
-    this.ctx.font = "20px Arial";
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-    this.ctx.fillStyle = "#FFFFFF";
-    this.ctx.fillText(emoji, x + 17, y + 14);
   }
 
   // Draw lives indicator with leaf icons

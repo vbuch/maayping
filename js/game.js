@@ -39,7 +39,7 @@ export class Game {
     // Completion flash effects
     this.flashEffects = [];
 
-    // Celebration state (happy beaver)
+    // Celebration state (happy character)
     this.celebrationTimer = 0;
     this.isCelebrating = false;
   }
@@ -157,12 +157,13 @@ export class Game {
       this.renderer.drawCompletionFlash(effect.x, effect.y);
     });
 
-    // Draw beaver with remaining lives (affects leaf size)
+    // Draw player with remaining lives (affects leaf size)
     const livesRemaining = this.maxEscapedWords - this.escapedWords;
-    this.renderer.drawBeaver(
+    this.renderer.drawPlayer(
       livesRemaining,
       this.maxEscapedWords,
       this.isCelebrating,
+      this.playerEmoji,
     );
 
     // Draw current word indicator
@@ -179,7 +180,6 @@ export class Game {
       this.currentSpeed,
       livesRemaining,
       this.maxEscapedWords,
-      this.playerEmoji,
     );
 
     // Draw pause overlay if paused
@@ -225,7 +225,7 @@ export class Game {
     }
   }
 
-  // Trigger celebration (happy beaver)
+  // Trigger celebration (happy character)
   triggerCelebration() {
     this.isCelebrating = true;
     this.celebrationTimer = 2.0; // Celebrate for 2 seconds
