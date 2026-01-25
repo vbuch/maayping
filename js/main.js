@@ -9,6 +9,30 @@ class App {
     this.game = null;
     this.currentLanguage = null;
     this.currentSpeedMultiplier = 1;
+    this.selectedProfileId = null;
+    this.profiles = [];
+    this.emojiChoices = [
+      "🦫",
+      "🐻",
+      "🦊",
+      "🐼",
+      "🐸",
+      "🐶",
+      "🐱",
+      "🐰",
+      "🦁",
+      "🐨",
+      "🐯",
+      "🦄",
+      "🐙",
+      "🐧",
+      "🐥",
+      "🐢",
+      "🦉",
+      "🦋",
+      "🐿️",
+      "🦔",
+    ];
 
     // DOM elements
     this.menuScreen = document.getElementById("menu-screen");
@@ -16,6 +40,18 @@ class App {
     this.pauseModal = document.getElementById("pause-modal");
     this.gameOverModal = document.getElementById("game-over-modal");
     this.canvas = document.getElementById("game-canvas");
+    this.profileButtons = document.getElementById("profile-buttons");
+    this.profileModal = document.getElementById("profile-modal");
+    this.profileNameInput = document.getElementById("profile-name");
+    this.emojiGrid = document.getElementById("emoji-grid");
+    this.createProfileBtn = document.getElementById("create-profile-btn");
+    this.cancelProfileBtn = document.getElementById("cancel-profile-btn");
+    this.selectedEmoji = null;
+
+    this.loadProfiles();
+    this.renderProfiles();
+    this.renderEmojiGrid();
+    this.applyProfileDifficulty();
 
     this.setupEventListeners();
   }
@@ -46,8 +82,17 @@ class App {
         this.currentSpeedMultiplier = Number.isFinite(speedMultiplier)
           ? speedMultiplier
           : 1;
+        this.persistProfileDifficulty();
       });
     });
+
+    // Profile create/cancel buttons
+    this.createProfileBtn.addEventListener("click", () =>
+      this.handleCreateProfile(),
+    );
+    this.cancelProfileBtn.addEventListener("click", () =>
+      this.closeProfileModal(),
+    );
 
     // Pause button
     document.getElementById("pause-btn").addEventListener("click", () => {
@@ -102,7 +147,13 @@ class App {
     }
 
     // Create and initialize new game
-    this.game = new Game(this.canvas, language, this.currentSpeedMultiplier);
+    const playerEmoji = this.getSelectedProfileEmoji();
+    this.game = new Game(
+      this.canvas,
+      language,
+      this.currentSpeedMultiplier,
+      playerEmoji,
+    );
 
     // Set up game end callback
     this.game.onGameEnd = (result) => this.showGameOver(result);
@@ -161,6 +212,8 @@ class App {
     wordsTyped.textContent = result.wordsCompleted;
     accuracy.textContent = result.accuracy;
 
+    this.saveProfileStats(result);
+
     // Show modal
     modal.classList.remove("hidden");
   }
@@ -180,6 +233,158 @@ class App {
     this.menuScreen.classList.remove("hidden");
 
     this.currentLanguage = null;
+  }
+
+  loadProfiles() {
+    const raw = localStorage.getItem("maaypingProfiles");
+    const selected = localStorage.getItem("maaypingSelectedProfile");
+    this.profiles = raw ? JSON.parse(raw) : [];
+    this.selectedProfileId = selected || (this.profiles[0]?.id ?? null);
+  }
+
+  saveProfiles() {
+    localStorage.setItem("maaypingProfiles", JSON.stringify(this.profiles));
+    if (this.selectedProfileId) {
+      localStorage.setItem("maaypingSelectedProfile", this.selectedProfileId);
+    } else {
+      localStorage.removeItem("maaypingSelectedProfile");
+    }
+  }
+
+  renderProfiles() {
+    if (!this.profileButtons) return;
+    this.profileButtons.innerHTML = "";
+
+    this.profiles.forEach((profile) => {
+      const button = document.createElement("button");
+      button.className = "profile-btn";
+      if (profile.id === this.selectedProfileId) {
+        button.classList.add("selected");
+      }
+      button.title = profile.name;
+      button.textContent = profile.emoji;
+      button.addEventListener("click", () => this.selectProfile(profile.id));
+      this.profileButtons.appendChild(button);
+    });
+
+    const addButton = document.createElement("button");
+    addButton.className = "profile-btn add";
+    addButton.textContent = "+";
+    addButton.addEventListener("click", () => this.openProfileModal());
+    this.profileButtons.appendChild(addButton);
+  }
+
+  selectProfile(profileId) {
+    this.selectedProfileId = profileId;
+    this.saveProfiles();
+    this.renderProfiles();
+    this.applyProfileDifficulty();
+  }
+
+  applyProfileDifficulty() {
+    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
+    const multiplier = profile?.lastDifficulty ?? 1;
+    this.currentSpeedMultiplier = multiplier;
+    this.setDifficultySelection(multiplier);
+  }
+
+  setDifficultySelection(multiplier) {
+    const difficultyButtons = document.querySelectorAll(".difficulty-btn");
+    difficultyButtons.forEach((btn) => {
+      const speedMultiplier = parseFloat(btn.dataset.speed);
+      btn.classList.toggle(
+        "selected",
+        Number.isFinite(speedMultiplier) && speedMultiplier === multiplier,
+      );
+    });
+  }
+
+  persistProfileDifficulty() {
+    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
+    if (!profile) return;
+    profile.lastDifficulty = this.currentSpeedMultiplier;
+    this.saveProfiles();
+  }
+
+  renderEmojiGrid() {
+    if (!this.emojiGrid) return;
+    this.emojiGrid.innerHTML = "";
+    this.emojiChoices.forEach((emoji, index) => {
+      const option = document.createElement("button");
+      option.className = "emoji-option";
+      option.textContent = emoji;
+      option.addEventListener("click", () => this.selectEmoji(index));
+      this.emojiGrid.appendChild(option);
+    });
+    this.selectEmoji(0);
+  }
+
+  selectEmoji(index) {
+    const options = this.emojiGrid.querySelectorAll(".emoji-option");
+    options.forEach((option, i) => {
+      option.classList.toggle("selected", i === index);
+    });
+    this.selectedEmoji = this.emojiChoices[index] ?? null;
+  }
+
+  openProfileModal() {
+    this.profileNameInput.value = "";
+    this.profileModal.classList.remove("hidden");
+  }
+
+  closeProfileModal() {
+    this.profileModal.classList.add("hidden");
+  }
+
+  handleCreateProfile() {
+    const name = this.profileNameInput.value.trim();
+    if (!name || !this.selectedEmoji) return;
+
+    const profile = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      emoji: this.selectedEmoji,
+      lastDifficulty: this.currentSpeedMultiplier,
+      stats: [],
+    };
+
+    this.profiles.push(profile);
+    this.selectedProfileId = profile.id;
+    this.saveProfiles();
+    this.renderProfiles();
+    this.closeProfileModal();
+  }
+
+  saveProfileStats(result) {
+    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
+    if (!profile) return;
+    const now = new Date();
+    const stamp = this.formatTimestamp(now);
+    const entry = {
+      time: stamp,
+      wordsTyped: result.wordsCompleted,
+      accuracy: result.accuracy,
+      difficulty: this.currentSpeedMultiplier,
+    };
+    profile.stats = profile.stats ?? [];
+    profile.stats.unshift(entry);
+    profile.stats = profile.stats.slice(0, 50);
+    this.saveProfiles();
+  }
+
+  getSelectedProfileEmoji() {
+    const profile = this.profiles.find((p) => p.id === this.selectedProfileId);
+    return profile?.emoji ?? "🦫";
+  }
+
+  formatTimestamp(date) {
+    const pad = (value) => String(value).padStart(2, "0");
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${day}.${month}.${year}, ${hours}:${minutes}`;
   }
 }
 

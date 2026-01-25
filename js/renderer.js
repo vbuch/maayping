@@ -489,7 +489,14 @@ export class Renderer {
   }
 
   // Draw the HUD (progress, score, lives)
-  drawHUD(completed, total, currentSpeed, livesRemaining = 5, maxLives = 5) {
+  drawHUD(
+    completed,
+    total,
+    currentSpeed,
+    livesRemaining = 5,
+    maxLives = 5,
+    playerEmoji = "🦫",
+  ) {
     // Progress bar background
     const barX = 20;
     const barY = 20;
@@ -542,8 +549,25 @@ export class Renderer {
       );
     }
 
+    // Draw player emoji badge (top left)
+    this.drawPlayerBadge(playerEmoji, barX + barWidth + 15, barY + 2);
+
     // Draw lives indicator (top right)
     this.drawLivesIndicator(livesRemaining, maxLives);
+  }
+
+  // Draw player emoji badge
+  drawPlayerBadge(emoji, x, y) {
+    this.ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    this.ctx.beginPath();
+    this.ctx.roundRect(x, y, 34, 28, 8);
+    this.ctx.fill();
+
+    this.ctx.font = "20px Arial";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillStyle = "#FFFFFF";
+    this.ctx.fillText(emoji, x + 17, y + 14);
   }
 
   // Draw lives indicator with leaf icons

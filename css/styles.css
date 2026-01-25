@@ -77,6 +77,65 @@ h1 {
   font-style: italic;
 }
 
+/* Profile Selection */
+.profile-selection {
+  margin-bottom: 30px;
+}
+
+.profile-selection h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+  color: #90ee90;
+}
+
+.profile-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 52px;
+}
+
+.profile-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border 0.2s ease;
+}
+
+.profile-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+
+.profile-btn.selected {
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35);
+}
+
+.profile-btn.add {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffd700;
+  border-color: rgba(255, 215, 0, 0.6);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 0, 0.18) 0%,
+    rgba(255, 215, 0, 0.05) 100%
+  );
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
 /* Language Selection */
 .language-selection {
   margin-bottom: 40px;
@@ -189,6 +248,64 @@ h1 {
   box-shadow:
     0 0 0 3px rgba(255, 215, 0, 0.4),
     0 10px 22px rgba(0, 0, 0, 0.3);
+}
+
+/* Profile modal */
+.profile-modal {
+  min-width: 360px;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.profile-form label {
+  font-size: 14px;
+  color: #90ee90;
+  text-align: left;
+}
+
+#profile-name {
+  border-radius: 10px;
+  border: none;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.emoji-option {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.2s ease,
+    border 0.2s ease,
+    background 0.2s ease;
+}
+
+.emoji-option:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.emoji-option.selected {
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(110, 219, 122, 0.25);
 }
 
 /* Instructions */

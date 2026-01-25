@@ -6,11 +6,12 @@ import { AudioManager } from "./audio.js";
 
 // Main game class - handles game loop, state, and coordination
 export class Game {
-  constructor(canvas, language, speedMultiplier = 1) {
+  constructor(canvas, language, speedMultiplier = 1, playerEmoji = "🦫") {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.language = language;
     this.speedMultiplier = speedMultiplier;
+    this.playerEmoji = playerEmoji;
 
     // Game state: 'loading', 'playing', 'paused', 'gameOver', 'victory'
     this.state = "loading";
@@ -178,6 +179,7 @@ export class Game {
       this.currentSpeed,
       livesRemaining,
       this.maxEscapedWords,
+      this.playerEmoji,
     );
 
     // Draw pause overlay if paused
