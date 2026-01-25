@@ -507,7 +507,14 @@ export class Renderer {
   }
 
   // Draw the HUD (progress, score, lives)
-  drawHUD(completed, total, currentSpeed, livesRemaining = 5, maxLives = 5) {
+  drawHUD(
+    completed,
+    total,
+    currentSpeed,
+    livesRemaining = 5,
+    maxLives = 5,
+    syncIndicator = null,
+  ) {
     // Progress bar background
     const barX = 20;
     const barY = 20;
@@ -546,6 +553,17 @@ export class Renderer {
       barX + barWidth / 2,
       barY + barHeight / 2,
     );
+
+    if (syncIndicator) {
+      this.ctx.font = "18px Arial";
+      this.ctx.textAlign = "left";
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(
+        syncIndicator,
+        barX + barWidth + 12,
+        barY + barHeight / 2,
+      );
+    }
 
     // Speed indicator (small text)
     const speedTier = Math.floor(completed / CONFIG.game.wordsPerSpeedIncrease);

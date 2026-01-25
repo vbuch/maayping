@@ -36,6 +36,72 @@ body {
   align-items: center;
 }
 
+.auth-avatar {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 4;
+}
+
+.auth-avatar button {
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  cursor: pointer;
+}
+
+#auth-avatar-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+#auth-avatar-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#auth-avatar-fallback {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.auth-avatar-menu {
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 120px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+#auth-logout-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#auth-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .menu-content {
   text-align: center;
   color: white;

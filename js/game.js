@@ -42,6 +42,9 @@ export class Game {
     // Celebration state (happy character)
     this.celebrationTimer = 0;
     this.isCelebrating = false;
+
+    // Sync status indicator (emoji)
+    this.syncIndicator = null;
   }
 
   // Initialize the game (load assets, dictionaries)
@@ -180,6 +183,7 @@ export class Game {
       this.currentSpeed,
       livesRemaining,
       this.maxEscapedWords,
+      this.syncIndicator,
     );
 
     // Draw pause overlay if paused
@@ -319,5 +323,9 @@ export class Game {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+  }
+
+  setSyncIndicator(emoji) {
+    this.syncIndicator = emoji;
   }
 }
