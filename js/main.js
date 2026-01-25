@@ -41,6 +41,7 @@ class App {
     this.gameOverModal = document.getElementById("game-over-modal");
     this.canvas = document.getElementById("game-canvas");
     this.profileButtons = document.getElementById("profile-buttons");
+    this.profileStats = document.getElementById("profile-stats");
     this.profileModal = document.getElementById("profile-modal");
     this.profileNameInput = document.getElementById("profile-name");
     this.emojiGrid = document.getElementById("emoji-grid");
@@ -263,7 +264,9 @@ class App {
       }
       button.title = profile.name;
       button.textContent = profile.emoji;
-      button.addEventListener("click", () => this.selectProfile(profile.id));
+      button.addEventListener("click", () =>
+        this.handleProfileClick(profile.id),
+      );
       this.profileButtons.appendChild(button);
     });
 
@@ -279,6 +282,70 @@ class App {
     this.saveProfiles();
     this.renderProfiles();
     this.applyProfileDifficulty();
+    if (this.profileStats) {
+      this.profileStats.classList.add("hidden");
+    }
+  }
+
+  handleProfileClick(profileId) {
+    if (profileId === this.selectedProfileId) {
+      this.toggleProfileStats();
+      return;
+    }
+    this.selectProfile(profileId);
+  }
+
+  toggleProfileStats() {
+    if (!this.profileStats) return;
+    const isHidden = this.profileStats.classList.contains("hidden");
+    if (isHidden) {
+      this.showProfileStats(this.selectedProfileId, true);
+    } else {
+      this.profileStats.classList.add("hidden");
+    }
+  }
+
+  showProfileStats(profileId, forceShow = false) {
+    if (!this.profileStats || !profileId) return;
+    const profile = this.profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+
+    const stats = profile.stats ?? [];
+    const recent = stats.slice(0, 5);
+    const maxWords = stats.reduce(
+      (max, entry) => Math.max(max, entry.wordsTyped ?? 0),
+      0,
+    );
+    const maxAccuracy = stats.reduce(
+      (max, entry) => Math.max(max, entry.accuracy ?? 0),
+      0,
+    );
+
+    const listItems = recent
+      .map((entry) => {
+        const isMaxScore = entry.wordsTyped === maxWords && maxWords > 0;
+        const isMaxAcc = entry.accuracy === maxAccuracy && maxAccuracy > 0;
+        return `
+          <li>
+            <div class="stat-line">
+              <span>${entry.time}</span>
+              <span class="stat-score${isMaxScore ? " stat-highlight" : ""}">Words: ${entry.wordsTyped}</span>
+            </div>
+            <span class="stat-accuracy${isMaxAcc ? " stat-highlight" : ""}">${entry.accuracy}%</span>
+          </li>
+        `;
+      })
+      .join("");
+
+    const title = `Stats for ${profile.name}`;
+    this.profileStats.innerHTML = `
+      <h4>${title}</h4>
+      ${recent.length ? `<ul>${listItems}</ul>` : `<div>No games yet.</div>`}
+    `;
+
+    if (forceShow) {
+      this.profileStats.classList.remove("hidden");
+    }
   }
 
   applyProfileDifficulty() {
@@ -370,6 +437,7 @@ class App {
     profile.stats.unshift(entry);
     profile.stats = profile.stats.slice(0, 50);
     this.saveProfiles();
+    this.showProfileStats(profile.id, true);
   }
 
   getSelectedProfileEmoji() {
