@@ -176,7 +176,7 @@ export class Game {
     // Draw current input text
     this.renderer.drawCurrentInput(this.wordManager.getCurrentInput());
 
-    // Draw HUD with lives
+    // Draw HUD with lives and score
     this.renderer.drawHUD(
       this.wordManager.totalCompleted,
       CONFIG.game.totalWords,
@@ -184,6 +184,7 @@ export class Game {
       livesRemaining,
       this.maxEscapedWords,
       this.syncIndicator,
+      this.wordManager.getScore(),
     );
 
     // Draw pause overlay if paused
@@ -298,6 +299,7 @@ export class Game {
         victory: victory,
         wordsCompleted: this.wordManager.totalCompleted,
         accuracy: this.wordManager.getAccuracy(),
+        score: this.wordManager.getScore(),
       });
     }
   }

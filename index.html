@@ -78,6 +78,7 @@
         <h2 id="result-title">Game Over!</h2>
         <p id="result-message"></p>
         <div class="stats">
+          <p>Score: <span id="score-value">0</span> pts</p>
           <p>Words typed: <span id="words-typed">0</span></p>
           <p>Accuracy: <span id="accuracy">0</span>%</p>
         </div>
@@ -135,6 +136,48 @@
       </div>
     </div>
 
+    <!-- Ranking Modal -->
+    <div id="ranking-modal" class="modal hidden">
+      <div class="modal-content ranking-modal">
+        <h2>🏆 Global Ranking</h2>
+
+        <div id="ranking-nickname-section" class="ranking-nickname-section">
+          <p id="ranking-login-msg" class="ranking-login-msg hidden">Log in to participate in the global ranking.</p>
+          <div class="ranking-nickname-row" id="ranking-nickname-display" style="display:none">
+            <span class="ranking-nickname-label">Your nickname:</span>
+            <span id="ranking-nickname-value" class="ranking-nickname-value"></span>
+            <button id="ranking-nickname-edit-btn" type="button" class="ranking-edit-btn" title="Edit nickname">✏️</button>
+          </div>
+          <div class="ranking-nickname-form" id="ranking-nickname-form">
+            <label for="ranking-nickname-input">Nickname</label>
+            <input
+              id="ranking-nickname-input"
+              type="text"
+              maxlength="20"
+              placeholder="Your nickname"
+            />
+            <p class="ranking-nickname-hint">Leave empty if you don't want to participate in the global ranking</p>
+            <div class="ranking-nickname-buttons">
+              <button id="ranking-nickname-save-btn" type="button" class="primary-btn ranking-btn-small">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="ranking-user-rank" class="ranking-user-rank hidden">
+        </div>
+
+        <div class="ranking-list-section">
+          <h3>Top Players</h3>
+          <p id="ranking-empty" class="ranking-empty hidden">No rankings yet. Be the first!</p>
+          <ol id="ranking-list" class="ranking-list"></ol>
+        </div>
+
+        <div class="modal-buttons">
+          <button id="ranking-close-btn" class="primary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Account Footer -->
     <div id="account-footer" class="account-footer">
       <button id="footer-profile-btn" type="button" class="footer-profile-btn">
@@ -145,6 +188,7 @@
         <span class="footer-profile-text">Profile</span>
       </button>
       <button id="footer-login-btn" type="button">Log in</button>
+      <button id="footer-ranking-btn" type="button">🏆</button>
       <button id="footer-stats-btn" type="button">Stats</button>
       <button id="footer-logout-btn" type="button">Log out</button>
     </div>

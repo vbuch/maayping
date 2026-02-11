@@ -10,11 +10,14 @@ import {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
   collection,
   getDocs,
+  getCountFromServer,
   query,
   orderBy,
   limit,
+  where,
 } from "./firebase.js";
 
 console.log("Maayping: main.js loaded");
@@ -88,6 +91,21 @@ class App {
     this.statsEmptyState = document.getElementById("stats-empty");
     this.statsGrid = document.getElementById("stats-grid");
     this.statsCloseBtn = document.getElementById("stats-close-btn");
+
+    // Ranking modal elements
+    this.rankingModal = document.getElementById("ranking-modal");
+    this.rankingNicknameDisplay = document.getElementById("ranking-nickname-display");
+    this.rankingNicknameValue = document.getElementById("ranking-nickname-value");
+    this.rankingNicknameEditBtn = document.getElementById("ranking-nickname-edit-btn");
+    this.rankingNicknameForm = document.getElementById("ranking-nickname-form");
+    this.rankingNicknameInput = document.getElementById("ranking-nickname-input");
+    this.rankingNicknameSaveBtn = document.getElementById("ranking-nickname-save-btn");
+    this.rankingUserRank = document.getElementById("ranking-user-rank");
+    this.rankingList = document.getElementById("ranking-list");
+    this.rankingEmpty = document.getElementById("ranking-empty");
+    this.rankingCloseBtn = document.getElementById("ranking-close-btn");
+    this.rankingLoginMsg = document.getElementById("ranking-login-msg");
+    this.footerRankingBtn = document.getElementById("footer-ranking-btn");
 
     this.authUser = null;
     this.allowAnonymous = this.isLocalEnvironment();
@@ -255,6 +273,39 @@ class App {
       });
     }
 
+    // Ranking modal event listeners
+    if (this.footerRankingBtn) {
+      this.footerRankingBtn.addEventListener("click", async () => {
+        await this.openRankingModal();
+      });
+    }
+
+    if (this.rankingCloseBtn) {
+      this.rankingCloseBtn.addEventListener("click", () => {
+        this.closeRankingModal();
+      });
+    }
+
+    if (this.rankingNicknameEditBtn) {
+      this.rankingNicknameEditBtn.addEventListener("click", () => {
+        this.startEditNickname();
+      });
+    }
+
+    if (this.rankingNicknameSaveBtn) {
+      this.rankingNicknameSaveBtn.addEventListener("click", async () => {
+        await this.saveNickname();
+      });
+    }
+
+    if (this.rankingModal) {
+      this.rankingModal.addEventListener("click", (event) => {
+        if (event.target === this.rankingModal) {
+          this.closeRankingModal();
+        }
+      });
+    }
+
     if (this.statsModal) {
       this.statsModal.addEventListener("click", (event) => {
         if (event.target === this.statsModal) {
@@ -363,6 +414,10 @@ class App {
     // Update stats
     wordsTyped.textContent = result.wordsCompleted;
     accuracy.textContent = result.accuracy;
+    const scoreEl = document.getElementById("score-value");
+    if (scoreEl) {
+      scoreEl.textContent = (result.score ?? 0).toLocaleString();
+    }
 
     this.saveProfileStats(result);
     this.renderStatsModal();
@@ -455,6 +510,7 @@ class App {
       id: this.profileId,
       name: this.authUser?.displayName || this.profile?.name || "Player",
       emoji: "🦫",
+      globalNickname: "",
       lastDifficulty: 1,
       stats: [],
       maxSummary: {},
@@ -508,6 +564,7 @@ class App {
           id: this.profile.id,
           name: this.profile.name,
           emoji: this.profile.emoji,
+          globalNickname: this.profile.globalNickname ?? "",
           lastDifficulty: this.profile.lastDifficulty ?? 1,
           stats: this.profile.stats ?? [],
           maxSummary: this.profile.maxSummary ?? {},
@@ -526,6 +583,7 @@ class App {
       time: entry.time ?? null,
       wordsTyped: entry.wordsTyped ?? 0,
       accuracy: entry.accuracy ?? 0,
+      score: entry.score ?? 0,
       difficulty: entry.difficulty ?? 1,
       language: entry.language ?? null,
       localOrder: entry.localOrder ?? Date.now(),
@@ -534,6 +592,7 @@ class App {
     normalized.maxSummary =
       profile.maxSummary ?? this.buildMaxSummaryFromStats(normalized.stats);
     normalized.lastDifficulty = profile.lastDifficulty ?? 1;
+    normalized.globalNickname = profile.globalNickname ?? "";
     return normalized;
   }
 
@@ -720,6 +779,7 @@ class App {
       time: null,
       wordsTyped: result.wordsCompleted,
       accuracy: result.accuracy,
+      score: result.score ?? 0,
       difficulty: this.currentSpeedMultiplier,
       language: this.currentLanguage,
       localOrder: Date.now(),
@@ -736,6 +796,7 @@ class App {
     }
     this.syncStatEntry(profile, entry);
     this.syncMaxSummary(profile);
+    this.submitToLeaderboard(entry);
     this.renderStatsModal();
   }
 
@@ -864,6 +925,9 @@ class App {
     if (this.footerLogoutBtn) {
       this.footerLogoutBtn.title = logoutEnabled ? "Log out" : "Log in first";
     }
+    if (this.footerRankingBtn) {
+      this.footerRankingBtn.title = "Global Ranking";
+    }
   }
 
   ensureFooterLoginButton() {
@@ -922,7 +986,8 @@ class App {
       )} · ${this.formatDifficultyLabel(entry.difficulty)}</span>`;
       const value = document.createElement("div");
       value.className = "stats-value";
-      value.textContent = `${entry.wordsTyped} words · ${entry.accuracy}%`;
+      const scoreLabel = entry.score ? `${entry.score.toLocaleString()} pts · ` : "";
+      value.textContent = `${scoreLabel}${entry.wordsTyped} words · ${entry.accuracy}%`;
       li.appendChild(meta);
       li.appendChild(value);
       this.statsSummaryList.appendChild(li);
@@ -938,7 +1003,8 @@ class App {
       )} · ${this.formatDifficultyLabel(entry.difficulty)}</span><span>${timeLabel}</span>`;
       const value = document.createElement("div");
       value.className = "stats-value";
-      value.textContent = `${entry.wordsTyped} words · ${entry.accuracy}%`;
+      const scoreLabel = entry.score ? `${entry.score.toLocaleString()} pts · ` : "";
+      value.textContent = `${scoreLabel}${entry.wordsTyped} words · ${entry.accuracy}%`;
       li.appendChild(meta);
       li.appendChild(value);
       this.statsRecentList.appendChild(li);
@@ -1139,6 +1205,7 @@ class App {
       {
         name: profile.name,
         emoji: profile.emoji,
+        globalNickname: profile.globalNickname ?? "",
         lastDifficulty: profile.lastDifficulty ?? 1,
         updatedAt: serverTimestamp(),
       },
@@ -1163,6 +1230,7 @@ class App {
         {
           wordsTyped: entry.wordsTyped,
           accuracy: entry.accuracy,
+          score: entry.score ?? 0,
           difficulty: entry.difficulty,
           language: entry.language,
           createdAt: serverTimestamp(),
@@ -1211,6 +1279,7 @@ class App {
       if (data?.name) profile.name = data.name;
       if (data?.emoji) profile.emoji = data.emoji;
       if (data?.lastDifficulty) profile.lastDifficulty = data.lastDifficulty;
+      profile.globalNickname = data?.globalNickname ?? "";
     }
 
     const summaryRef = doc(
@@ -1251,6 +1320,7 @@ class App {
         time: createdAt ? this.formatTimestamp(createdAt) : null,
         wordsTyped: data.wordsTyped ?? 0,
         accuracy: data.accuracy ?? 0,
+        score: data.score ?? 0,
         difficulty: data.difficulty ?? 1,
         language: data.language ?? null,
         createdAt: createdAt ? createdAt.getTime() : null,
@@ -1294,12 +1364,15 @@ class App {
       const difficulty = this.formatDifficultyKey(entry.difficulty ?? 1);
       if (!summary[language]) summary[language] = {};
       const current = summary[language][difficulty];
-      if (!current || entry.wordsTyped > current.wordsTyped) {
+      const entryScore = entry.score ?? 0;
+      const currentScore = current?.score ?? 0;
+      if (!current || entryScore > currentScore) {
         summary[language][difficulty] = {
           language,
           difficulty: entry.difficulty ?? 1,
           wordsTyped: entry.wordsTyped ?? 0,
           accuracy: entry.accuracy ?? 0,
+          score: entryScore,
         };
       }
     });
@@ -1312,12 +1385,15 @@ class App {
     const difficultyKey = this.formatDifficultyKey(entry.difficulty ?? 1);
     if (!summary[language]) summary[language] = {};
     const current = summary[language][difficultyKey];
-    if (!current || entry.wordsTyped > current.wordsTyped) {
+    const entryScore = entry.score ?? 0;
+    const currentScore = current?.score ?? 0;
+    if (!current || entryScore > currentScore) {
       summary[language][difficultyKey] = {
         language,
         difficulty: entry.difficulty ?? 1,
         wordsTyped: entry.wordsTyped ?? 0,
         accuracy: entry.accuracy ?? 0,
+        score: entryScore,
       };
     }
     profile.maxSummary = summary;
@@ -1333,10 +1409,302 @@ class App {
           difficulty: value.difficulty ?? 1,
           wordsTyped: value.wordsTyped ?? 0,
           accuracy: value.accuracy ?? 0,
+          score: value.score ?? 0,
         });
       });
     });
-    return entries.sort((a, b) => b.wordsTyped - a.wordsTyped);
+    return entries.sort((a, b) => b.score - a.score);
+  }
+
+  // === Leaderboard & Ranking ===
+
+  async submitToLeaderboard(entry) {
+    if (!this.authUser || !this.profile) return;
+    const nickname = this.profile.globalNickname;
+    if (!nickname) return;
+    const score = entry.score ?? 0;
+    if (score <= 0) return;
+
+    try {
+      const leaderboardRef = doc(db, "leaderboard", this.authUser.uid);
+
+      let currentBest = 0;
+      try {
+        const existing = await getDoc(leaderboardRef);
+        currentBest = existing.exists() ? (existing.data().bestScore ?? 0) : 0;
+      } catch {
+        // If read fails (e.g. doc doesn't exist yet), assume no previous best
+        currentBest = 0;
+      }
+
+      if (score > currentBest) {
+        await setDoc(leaderboardRef, {
+          nickname: nickname,
+          bestScore: score,
+          wordsTyped: entry.wordsTyped ?? 0,
+          accuracy: entry.accuracy ?? 0,
+          language: entry.language ?? null,
+          difficulty: entry.difficulty ?? 1,
+          emoji: this.profile.emoji ?? "🦫",
+          uid: this.authUser.uid,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      console.warn("Failed to submit to leaderboard:", error?.code || error);
+    }
+  }
+
+  async updateLeaderboardNickname(nickname) {
+    if (!this.authUser) return;
+    try {
+      const leaderboardRef = doc(db, "leaderboard", this.authUser.uid);
+      const existing = await getDoc(leaderboardRef);
+      if (existing.exists()) {
+        await setDoc(leaderboardRef, {
+          nickname: nickname,
+          emoji: this.profile?.emoji ?? "🦫",
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.warn("Failed to update leaderboard nickname:", error);
+    }
+  }
+
+  async removeFromLeaderboard() {
+    if (!this.authUser) return;
+    try {
+      const leaderboardRef = doc(db, "leaderboard", this.authUser.uid);
+      await deleteDoc(leaderboardRef);
+    } catch (error) {
+      console.warn("Failed to remove from leaderboard:", error);
+    }
+  }
+
+  async fetchLeaderboard(count = 20) {
+    try {
+      const leaderboardQuery = query(
+        collection(db, "leaderboard"),
+        orderBy("bestScore", "desc"),
+        limit(count),
+      );
+      const snap = await getDocs(leaderboardQuery);
+      return {
+        entries: snap.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            uid: docSnap.id,
+            nickname: data.nickname ?? "???",
+            bestScore: data.bestScore ?? 0,
+            wordsTyped: data.wordsTyped ?? 0,
+            accuracy: data.accuracy ?? 0,
+            language: data.language ?? null,
+            difficulty: data.difficulty ?? 1,
+            emoji: data.emoji ?? "🦫",
+          };
+        }),
+        error: null,
+      };
+    } catch (error) {
+      console.warn("Failed to fetch leaderboard:", error);
+      return { entries: [], error: error.code || error.message };
+    }
+  }
+
+  async getUserRank(userScore) {
+    if (!userScore || userScore <= 0) return null;
+    try {
+      const higherScoresQuery = query(
+        collection(db, "leaderboard"),
+        where("bestScore", ">", userScore),
+      );
+      const countSnap = await getCountFromServer(higherScoresQuery);
+      return countSnap.data().count + 1;
+    } catch (error) {
+      console.warn("Failed to get user rank:", error);
+      return null;
+    }
+  }
+
+  async openRankingModal() {
+    if (!this.rankingModal) return;
+
+    const isAuthenticated = Boolean(this.authUser);
+
+    // Show login message for unauthenticated users
+    if (this.rankingLoginMsg) {
+      this.rankingLoginMsg.classList.toggle("hidden", isAuthenticated);
+    }
+
+    if (isAuthenticated) {
+      const hasNickname = Boolean(this.profile?.globalNickname);
+      this.showRankingNicknameSection(hasNickname);
+      if (hasNickname) {
+        this.rankingNicknameValue.textContent = this.profile.globalNickname;
+      }
+    } else {
+      // Hide nickname UI for unauthenticated users
+      this.rankingNicknameDisplay.style.display = "none";
+      this.rankingNicknameForm.style.display = "none";
+    }
+
+    this.rankingModal.classList.remove("hidden");
+    await this.renderRankingModal();
+  }
+
+  closeRankingModal() {
+    if (!this.rankingModal) return;
+    this.rankingModal.classList.add("hidden");
+  }
+
+  showRankingNicknameSection(hasNickname) {
+    if (hasNickname) {
+      this.rankingNicknameDisplay.style.display = "";
+      this.rankingNicknameForm.style.display = "none";
+    } else {
+      this.rankingNicknameDisplay.style.display = "none";
+      this.rankingNicknameForm.style.display = "";
+      this.rankingNicknameInput.value = this.profile?.globalNickname ?? "";
+    }
+  }
+
+  startEditNickname() {
+    this.rankingNicknameInput.value = this.profile?.globalNickname ?? "";
+    this.rankingNicknameDisplay.style.display = "none";
+    this.rankingNicknameForm.style.display = "";
+    this.rankingNicknameInput.focus();
+  }
+
+  async saveNickname() {
+    const nickname = this.rankingNicknameInput.value.trim();
+    if (!this.profile) return;
+
+    const oldNickname = this.profile.globalNickname;
+    this.profile.globalNickname = nickname;
+
+    if (this.allowAnonymous && !this.authUser) {
+      this.saveLocalProfile();
+    } else if (this.authUser) {
+      await this.syncProfileMetadata(this.profile);
+      if (nickname) {
+        await this.updateLeaderboardNickname(nickname);
+        // If they just set a nickname and have scores, submit best to leaderboard
+        const bestEntry = this.getBestScoreEntry();
+        if (bestEntry && bestEntry.score > 0) {
+          await this.submitToLeaderboard(bestEntry);
+        }
+      } else if (oldNickname) {
+        await this.removeFromLeaderboard();
+      }
+    }
+
+    const hasNickname = Boolean(nickname);
+    this.showRankingNicknameSection(hasNickname);
+    if (hasNickname) {
+      this.rankingNicknameValue.textContent = nickname;
+    }
+    await this.renderRankingModal();
+  }
+
+  getBestScoreEntry() {
+    const stats = this.profile?.stats ?? [];
+    if (stats.length === 0) return null;
+    return stats.reduce((best, entry) => {
+      if (!best || (entry.score ?? 0) > (best.score ?? 0)) return entry;
+      return best;
+    }, null);
+  }
+
+  async renderRankingModal() {
+    if (!this.rankingList) return;
+
+    this.rankingList.innerHTML = "";
+    if (this.rankingUserRank) {
+      this.rankingUserRank.classList.add("hidden");
+      this.rankingUserRank.innerHTML = "";
+    }
+
+    const result = await this.fetchLeaderboard(20);
+    const entries = result.entries;
+
+    if (result.error) {
+      if (this.rankingEmpty) {
+        this.rankingEmpty.textContent =
+          result.error === "permission-denied"
+            ? "Firestore rules need to be configured for the leaderboard collection."
+            : `Failed to load rankings (${result.error}).`;
+        this.rankingEmpty.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (entries.length === 0) {
+      if (this.rankingEmpty) {
+        this.rankingEmpty.textContent = "No rankings yet. Be the first!";
+        this.rankingEmpty.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (this.rankingEmpty) this.rankingEmpty.classList.add("hidden");
+
+    const currentUid = this.authUser?.uid;
+    let userInList = false;
+
+    entries.forEach((entry, index) => {
+      const li = document.createElement("li");
+      const position = index + 1;
+      const isCurrentUser = currentUid && entry.uid === currentUid;
+      if (isCurrentUser) {
+        li.classList.add("is-current-user");
+        userInList = true;
+      }
+
+      const posEl = document.createElement("span");
+      posEl.className = "ranking-position";
+      if (position <= 3) posEl.classList.add(`top-${position}`);
+      const medals = ["", "🥇", "🥈", "🥉"];
+      posEl.textContent = position <= 3 ? medals[position] : `#${position}`;
+
+      const emojiEl = document.createElement("span");
+      emojiEl.className = "ranking-emoji";
+      emojiEl.textContent = entry.emoji;
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "ranking-name";
+      nameEl.textContent = entry.nickname;
+
+      const scoreEl = document.createElement("span");
+      scoreEl.className = "ranking-score";
+      scoreEl.textContent = `${entry.bestScore.toLocaleString()} pts`;
+
+      const detailsEl = document.createElement("span");
+      detailsEl.className = "ranking-details";
+      detailsEl.textContent = `${entry.wordsTyped}w · ${entry.accuracy}%`;
+
+      li.appendChild(posEl);
+      li.appendChild(emojiEl);
+      li.appendChild(nameEl);
+      li.appendChild(scoreEl);
+      li.appendChild(detailsEl);
+      this.rankingList.appendChild(li);
+    });
+
+    // Show user rank if they have a nickname and are authenticated
+    if (currentUid && this.profile?.globalNickname && this.rankingUserRank) {
+      const bestEntry = this.getBestScoreEntry();
+      const userScore = bestEntry?.score ?? 0;
+      if (userScore > 0) {
+        const rank = userInList
+          ? entries.findIndex((e) => e.uid === currentUid) + 1
+          : await this.getUserRank(userScore);
+        if (rank) {
+          this.rankingUserRank.textContent = `Your rank: #${rank} · ${userScore.toLocaleString()} pts`;
+          this.rankingUserRank.classList.remove("hidden");
+        }
+      }
+    }
   }
 
   formatLanguageLabel(language) {

@@ -514,6 +514,7 @@ export class Renderer {
     livesRemaining = 5,
     maxLives = 5,
     syncIndicator = null,
+    score = 0,
   ) {
     // Progress bar background
     const barX = 20;
@@ -564,6 +565,17 @@ export class Renderer {
         barY + barHeight / 2,
       );
     }
+
+    // Score display (top center)
+    this.ctx.fillStyle = "#FFFFFF";
+    this.ctx.font = "bold 16px Arial";
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText(
+      `${score.toLocaleString()} pts`,
+      this.width / 2,
+      barY + barHeight / 2,
+    );
 
     // Speed indicator (small text)
     const speedTier = Math.floor(completed / CONFIG.game.wordsPerSpeedIncrease);

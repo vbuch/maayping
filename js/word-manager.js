@@ -21,6 +21,7 @@ export class WordManager {
     // Statistics
     this.totalSpawned = 0;
     this.totalCompleted = 0;
+    this.totalScore = 0;
     this.totalKeystrokes = 0;
     this.correctKeystrokes = 0;
 
@@ -238,14 +239,22 @@ export class WordManager {
     if (index > -1) {
       this.activeWords.splice(index, 1);
       this.totalCompleted++;
+      const points = word.text.length * 10;
+      this.totalScore += points;
 
       return {
         type: "completed",
         word: word,
         totalCompleted: this.totalCompleted,
+        points: points,
       };
     }
     return { type: "none" };
+  }
+
+  // Get total score
+  getScore() {
+    return this.totalScore;
   }
 
   // Check if any word has passed the fail line (reached the leaf)
@@ -302,6 +311,7 @@ export class WordManager {
     this.spawnTimer = this.initialDelay;
     this.totalSpawned = 0;
     this.totalCompleted = 0;
+    this.totalScore = 0;
     this.totalKeystrokes = 0;
     this.correctKeystrokes = 0;
     this.currentInput = "";

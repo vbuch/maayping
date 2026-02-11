@@ -12,11 +12,14 @@ import {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
   collection,
   getDocs,
+  getCountFromServer,
   query,
   orderBy,
   limit,
+  where,
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -46,9 +49,12 @@ export {
   doc,
   setDoc,
   getDoc,
+  deleteDoc,
   collection,
   getDocs,
+  getCountFromServer,
   query,
   orderBy,
   limit,
+  where,
 };
